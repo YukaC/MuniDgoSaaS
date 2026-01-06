@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Turno - Municipalidad de Coronel Dorrego</title>
+    <!-- Importamos el CSS unificado -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Librería ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>Mi Turno</h2>
+                <p style="font-size: 0.85rem; margin-top: 5px; opacity: 0.9;">Municipalidad de Coronel Dorrego</p>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a data-target="dashboard" class="active">🏠 Panel</a></li>
+                    <li><a data-target="reports">📊 Reportes</a></li>
+                    <li><a data-target="view-shifts">📅 Citas</a></li>
+                    <li><a data-target="view-clients">👥 Clientes</a></li>
+                    <li><a data-target="view-professional">👨‍⚕️ Profesionales</a></li>
+                    <li><a data-target="view-availability">⏰ Disponibilidades</a></li>
+                    <li><a data-target="view-services">💼 Servicios</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Panel de Control</h1>
+                <button class="logout-btn" id="logout">Cerrar Sesión</button>
+            </header>
+
+            <!-- SECCIÓN DASHBOARD -->
+            <div class="page-content active-page" id="dashboard">
+                <h2 id="welcome-message">Bienvenido al Panel</h2>
+                <p class="help-text">Resumen de actividad del día.</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Citas Totales</h3>
+                        <p id="totalShift">--</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Completadas</h3>
+                        <p id="completedShift" style="color: var(--success);">--</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Canceladas</h3>
+                        <p id="canceledShift" style="color: var(--danger);">--</p>
+                    </div>
+                </div>
+
+                <div class="recent-shifts">
+                    <h3>Próximos Turnos</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Horario</th> 
+                                    <th>Cliente</th>
+                                    <th>Profesional / Especialidad</th> 
+                                    <th>Estado</th>
+                                    <th>Observaciones</th> 
+                                </tr>
+                            </thead>
+                            <tbody id="shifts-table-body">
+                                <!-- Se llena vía JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN REPORTES -->
+            <div class="page-content" id="reports" style="display: none;">
+                <h2>📊 Reportes y Métricas</h2>
+                
+                <!-- Barras de Progreso -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Tasa de Ocupación</h3>
+                        <p id="rep-ocupacion-pct" class="kpi-number">0%</p>
+                        <div class="progress-bg">
+                            <div id="bar-ocupacion" class="progress-fill" style="width: 0%; background-color: var(--success);"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tasa de Cancelación</h3>
+                        <p id="rep-cancelacion-pct" class="kpi-number">0%</p>
+                        <div class="progress-bg">
+                            <div id="bar-cancelacion" class="progress-fill" style="width: 0%; background-color: var(--danger);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos ECharts -->
+                <div class="charts-grid">
+                    <div class="chart-card-container">
+                        <h3>💰 Ingresos por Profesional (Top 10)</h3>
+                        <div id="chart-revenue-prof" class="chart-container"></div>
+                    </div>
+                    <div class="chart-card-container">
+                        <h3>📈 Turnos Reservados - Última Semana</h3>
+                        <div id="chart-turns-week" class="chart-container"></div>
+                    </div>
+                </div>
+
+                <!-- Tablas Detalladas -->
+                <div class="recent-shifts" style="margin-top: 20px;">
+                    <h3>👨‍⚕️ Rendimiento Detallado</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Profesional</th>
+                                    <th>Turnos Totales</th>
+                                    <th>Ingresos Generados</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-profesionales"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="recent-shifts" style="margin-top: 20px;">
+                    <h3>👥 Clientes Más Activos</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Turnos Asistidos</th>
+                                    <th>Última Visita</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-clientes"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN CITAS -->
+            <div class="page-content" id="view-shifts" style="display: none;">
+                <div class="flex-between">
+                    <h2>📅 Gestión de Citas</h2>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalTurno()">+ Nuevo Turno</button>
+                </div>
+                <div class="recent-shifts">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Profesional</th>
+                                    <th>Servicio</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-gestion-turnos"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN CLIENTES -->
+            <div class="page-content" id="view-clients" style="display: none;">
+                <h2>👥 Base de Clientes (Historial)</h2>
+                <p class="help-text">Lista generada automáticamente a partir del historial de turnos.</p>
+                <div class="recent-shifts">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Visitas Totales</th>
+                                    <th>Última Visita</th>
+                                    <th>Servicios Recibidos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-gestion-clientes"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN PROFESIONALES -->
+            <div class="page-content" id="view-professional" style="display: none;">
+                <div class="flex-between">
+                    <h2>👨‍⚕️ Equipo de Profesionales</h2>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalProfesional()">+ Nuevo Profesional</button>
+                </div>
+                <div class="recent-shifts">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Matrícula</th>
+                                    <th>DNI</th>
+                                    <th>Email</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-gestion-profesionales"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN SERVICIOS -->
+            <div class="page-content" id="view-services" style="display: none;">
+                <div class="flex-between">
+                    <h2>💼 Catálogo de Servicios</h2>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalServicio()">+ Nuevo Servicio</button>
+                </div>
+                <div class="recent-shifts">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Duración</th>
+                                    <th>Precio</th>
+                                    <th>Descripción</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-gestion-servicios"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DISPONIBILIDADES -->
+            <div class="page-content" id="view-availability" style="display: none;">
+                <div class="flex-between">
+                    <h2>⏰ Gestión de Disponibilidades</h2>
+                    <!-- Botón global eliminado como pediste -->
+                </div>
+
+                <!-- Filtro eliminado como pediste -->
+
+                <div class="recent-shifts">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Profesional</th>
+                                    <th>Resumen Horarios</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-gestion-disponibilidades">
+                                <!-- Se llena vía JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= MODALES ================= -->
+    
+    <!-- Modal Turnos -->
+    <div id="turnoModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Turno</h3>
+                <span class="close-modal" onclick="cerrarModalTurno()">&times;</span>
+            </div>
+            <form id="formTurno">
+                <input type="hidden" id="turnoId">
+                
+                <div class="form-group">
+                    <label>Cliente:</label>
+                    <div id="clienteSearchContainer">
+                        <input type="text" id="clienteName" required placeholder="Buscar o escribir nombre del cliente..." 
+                               autocomplete="off" oninput="buscarClientesExistentes(this.value)">
+                        <div id="clientesLista" class="clientes-lista" style="display: none;"></div>
+                        <small class="form-text" id="clienteHelpText">Escribe para buscar clientes existentes o crea uno nuevo</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Profesional:</label>
+                    <select id="selectProfesional" required>
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Servicio (Opcional):</label>
+                    <select id="selectServicio">
+                        <option value="">Consulta General (Automática)</option>
+                    </select>
+                    <small class="form-text">Si no seleccionas un servicio, se usará la especialidad del profesional</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha:</label>
+                        <input type="date" id="fechaTurno" required min="" onchange="cargarHorariosDisponiblesAdmin()">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora:</label>
+                        <select id="horaTurno" required disabled>
+                            <option value="">Primero selecciona fecha y profesional</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Observaciones (Opcional):</label>
+                    <textarea id="observacionesTurno" rows="3" placeholder="Agregar consideraciones o información adicional..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select id="selectEstado">
+                        <option value="Reservado">Reservado</option>
+                        <option value="Pendiente de Confirmación">Pendiente de Confirmación</option>
+                        <option value="Completado">Completado</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="cerrarModalTurno()">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnSaveTurno" style="width: auto;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Profesionales -->
+    <div id="modalProfesional" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitleProf">Profesional</h3>
+                <span class="close-modal" onclick="cerrarModalProfesional()">&times;</span>
+            </div>
+            <form id="formProfesional">
+                <input type="hidden" id="profId">
+                <div class="form-group"><label>Nombre:</label><input type="text" id="profName" required></div>
+                <div class="form-group"><label>Apellido:</label><input type="text" id="profSurname" required></div>
+                <div class="form-group"><label>Especialidad:</label><input type="text" id="profEspecialidad" placeholder="Ej: Clínica General, Cardiología, etc." value="Consulta General"></div>
+                <div class="form-group"><label>Matrícula:</label><input type="text" id="profMatricula" required></div>
+                <div class="form-group"><label>DNI:</label><input type="text" id="profDni" required></div>
+                <div class="form-group"><label>Email:</label><input type="email" id="profEmail" required></div>
+                
+                <!-- Sección para agregar horarios DENTRO del modal de profesional (opcional según tu lógica en profesionales.js) -->
+                <div id="secDisponibilidad" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <h4 style="margin-bottom:10px;">Horarios de Atención</h4>
+                    <p id="msgGuardarPrimero" style="font-size:0.8em; color:orange; display:none;">Guarda el profesional primero para agregar horarios.</p>
+                    
+                    <div class="table-responsive" style="max-height: 150px; overflow-y:auto; margin-bottom:10px; border:1px solid #eee;">
+                        <table style="font-size:0.9em;">
+                            <tbody id="tabla-disponibilidades"></tbody>
+                        </table>
+                    </div>
+                    <!-- Nota: Los inputs para agregar horario en este modal específico se gestionan vía profesionales.js -> agregarDisponibilidadUI si decidiste mantener esa funcionalidad mixta -->
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="cerrarModalProfesional()">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="width: auto;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Disponibilidad -->
+   <div id="modalDisponibilidad" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header">
+                <h3 id="titleDisponibilidad">Gestionar Horarios</h3>
+                <span class="close-modal" onclick="cerrarModalDisponibilidad()">&times;</span>
+            </div>
+
+            <!-- Input oculto para saber a quién estamos editando -->
+            <input type="hidden" id="dispProfesionalId">
+
+            <!-- 1. Formulario para Agregar Nuevo Horario -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Agregar Rango Horario</h4>
+                
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size: 0.85em;">Día</label>
+                        <select id="dispDia" style="padding: 8px; font-size: 0.9rem;">
+                            <option value="1">Lunes</option>
+                            <option value="2">Martes</option>
+                            <option value="3">Miércoles</option>
+                            <option value="4">Jueves</option>
+                            <option value="5">Viernes</option>
+                            <option value="6">Sábado</option>
+                            <option value="0">Domingo</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size: 0.85em;">Desde</label>
+                        <input type="time" id="dispInicio" required style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size: 0.85em;">Hasta</label>
+                        <input type="time" id="dispFin" required style="padding: 8px;">
+                    </div>
+                </div>
+                
+                <button type="button" class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="guardarDisponibilidad()">+ Agregar Horario</button>
+            </div>
+
+            <!-- 2. Lista de Horarios Existentes (Se llena via JS) -->
+            <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Horarios Actuales</h4>
+            <div id="lista-horarios-modal-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+                <!-- Aquí se inyecta la tabla o lista de horarios -->
+                <p style="padding: 10px; color: #777; text-align: center;">Cargando...</p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalDisponibilidad()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Servicios -->
+    <div id="modalServicio" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitleServ">Servicio</h3>
+                <span class="close-modal" onclick="cerrarModalServicio()">&times;</span>
+            </div>
+            <form id="formServicio">
+                <input type="hidden" id="servId">
+                <div class="form-group"><label>Nombre:</label><input type="text" id="servName" required></div>
+                <div class="form-group"><label>Duración (min):</label><input type="number" id="servDuration" required></div>
+                <div class="form-group"><label>Precio:</label><input type="number" id="servPrice" required step="0.01"></div>
+                <div class="form-group"><label>Descripción:</label><textarea id="servDesc" rows="3"></textarea></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="cerrarModalServicio()">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="width: auto;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/reportes.js"></script>
+    <script src="js/turnos.js"></script>
+    <script src="js/clientes.js"></script>
+    <script src="js/profesionales.js"></script>
+    <script src="js/disponibilidades.js"></script>
+    <script src="js/servicios.js"></script>
+</body>
+</html>
