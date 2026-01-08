@@ -22,6 +22,7 @@ from api.utils.formatters import (
 )
 from api.utils.seguridad_clientes import requiere_token_cliente
 from api.utils.seguridad import requiere_token as requiere_token_admin
+from api.utils.sanitizer import sanitize_string, sanitize_email, sanitize_telefono
 from api import app
 
 
@@ -60,6 +61,16 @@ def actualizar_perfil_cliente():
     datos = request.get_json()
     
     try:
+        # Sanitizar inputs
+        if 'nombre' in datos:
+            datos['nombre'] = sanitize_string(datos.get('nombre'), max_length=100)
+        if 'apellido' in datos:
+            datos['apellido'] = sanitize_string(datos.get('apellido'), max_length=100)
+        if 'email' in datos:
+            datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+        if 'telefono' in datos:
+            datos['telefono'] = sanitize_telefono(datos.get('telefono'))
+        
         with get_db_cursor() as cursor:
             # Validar e-mail único si se cambia
             if 'email' in datos and datos['email']:

@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from api.models.Clientes import Cliente
 from api.utils.rate_limit import rate_limit_registro, rate_limit_login
+from api.utils.sanitizer import sanitize_string, sanitize_dni, sanitize_email, sanitize_telefono
 from api import app
 
 # ==================== AUTENTICACIÓN DE CLIENTES ====================
@@ -16,12 +17,19 @@ def registrar_cliente():
         return jsonify({"message": "Se requiere un cuerpo JSON"}), 400
 
     try:
+        # Sanitizar inputs antes de validar
+        datos['dni'] = sanitize_dni(datos.get('dni'))
+        datos['nombre'] = sanitize_string(datos.get('nombre'), max_length=100)
+        datos['apellido'] = sanitize_string(datos.get('apellido'), max_length=100)
+        datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+        datos['telefono'] = sanitize_telefono(datos.get('telefono')) if datos.get('telefono') else None
+        
         # Validar campos requeridos
         if not datos.get("dni") or not datos.get("nombre") or not datos.get("apellido") or not datos.get("password"):
             return jsonify({"message": "DNI, nombre, apellido y contraseña son requeridos"}), 400
 
         # Validar formato de DNI (solo números, entre 7 y 8 dígitos)
-        dni = datos["dni"].strip()
+        dni = datos["dni"]
         if not dni.isdigit() or len(dni) < 7 or len(dni) > 8:
             return jsonify({"message": "DNI inválido. Debe contener entre 7 y 8 dígitos numéricos"}), 400
 
