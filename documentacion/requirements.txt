@@ -1,5 +1,0 @@
-flask
-mysql-connector-python
-python-dotenv
-PyJWT
-flask-cors
