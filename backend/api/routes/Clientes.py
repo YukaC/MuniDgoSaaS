@@ -91,7 +91,7 @@ def crear_cliente_admin(id_empresa):
         with get_db_cursor() as cursor:
             # Verificar duplicados
             if _check_cliente_duplicado(cursor, datos.get('dni'), datos.get('email')):
-                return jsonify({"message": "El cliente con este DNI o Email ya existe"}), 400
+                return jsonify({"message": "No se pudo completar el registro. Verifique los datos ingresados."}), 400
             
             # Password por defecto es el DNI
             raw_password = datos.get('password') or datos['dni']
@@ -591,7 +591,7 @@ def _validate_cliente_update(cursor, id_cliente, datos):
             (datos['dni'], id_cliente)
         )
         if cursor.fetchone():
-            return jsonify({"message": "Ya existe otro cliente con ese DNI"}), 400
+            return jsonify({"message": "No se pudo actualizar. Verifique los datos ingresados."}), 400
     
     if 'email' in datos and datos['email']:
         cursor.execute(
@@ -599,7 +599,7 @@ def _validate_cliente_update(cursor, id_cliente, datos):
             (datos['email'], id_cliente)
         )
         if cursor.fetchone():
-            return jsonify({"message": "Ya existe otro cliente con ese Email"}), 400
+            return jsonify({"message": "No se pudo actualizar. Verifique los datos ingresados."}), 400
     
     return None
 

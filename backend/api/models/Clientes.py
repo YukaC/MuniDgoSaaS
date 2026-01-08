@@ -95,13 +95,13 @@ class Cliente:
             # Validar que el DNI no esté duplicado
             cursor.execute("SELECT id FROM clientes WHERE dni = %s", (datos["dni"],))
             if cursor.fetchone():
-                raise ValueError("Ya existe un cliente registrado con este DNI")
+                raise ValueError("No se pudo completar el registro. Verifique los datos ingresados.")
 
             # Validar email si se proporciona
             if datos.get("email"):
                 cursor.execute("SELECT id FROM clientes WHERE email = %s", (datos["email"],))
                 if cursor.fetchone():
-                    raise ValueError("Ya existe un cliente registrado con este email")
+                    raise ValueError("No se pudo completar el registro. Verifique los datos ingresados.")
 
             # Hash de la contraseña
             password_hash = generate_password_hash(datos["password"])
@@ -174,13 +174,13 @@ class Cliente:
             if "dni" in datos:
                 cursor.execute("SELECT id FROM clientes WHERE dni = %s AND id != %s", (datos["dni"], id))
                 if cursor.fetchone():
-                    raise ValueError("Ya existe otro cliente con este DNI")
+                    raise ValueError("No se pudo actualizar. Verifique los datos ingresados.")
 
             # Validar email único si se está cambiando
             if "email" in datos and datos["email"]:
                 cursor.execute("SELECT id FROM clientes WHERE email = %s AND id != %s", (datos["email"], id))
                 if cursor.fetchone():
-                    raise ValueError("Ya existe otro cliente con este email")
+                    raise ValueError("No se pudo actualizar. Verifique los datos ingresados.")
 
             # Si se actualiza la contraseña, hashearla
             if "password" in datos:
