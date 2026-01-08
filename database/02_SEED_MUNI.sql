@@ -6,7 +6,7 @@
 -- No es necesario especificarlos en los INSERT
 -- ============================================================
 
-USE ProyectoTurnos;
+USE turnos_dorrego;
 
 -- Desactivar chequeo de claves foráneas para limpiar tablas sin errores
 SET FOREIGN_KEY_CHECKS = 0;

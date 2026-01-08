@@ -1,113 +1,193 @@
-/* --- MODULO DE GESTION DE CLIENTES --- */
 
+let cacheClientes = [];
+
+/* --- CARGA INICIAL DEL MODULO DE CLIENTES --- */
 async function cargarLogicaClientes() {
-  console.log("👥 Iniciando módulo de clientes...");
-  await listarClientesDesdeTurnos();
+    console.log("Iniciando módulo de clientes...");
+    
+    // Configurar formulario
+    const form = document.getElementById("formCliente");
+    if (form) {
+        // Remover listener previo para evitar duplicados si se llama varias veces
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        document.getElementById("formCliente").addEventListener("submit", guardarCliente);
+    }
+    
+    await listarClientes();
 }
 
-/**
- * procesamiento de datos e historial de clientes basado en turnos
- */
-async function listarClientesDesdeTurnos() {
-  const tbody = document.getElementById("tabla-gestion-clientes");
-  if (tbody)
-    tbody.innerHTML =
-      '<tr><td colspan="4" style="text-align:center;">Cargando historial...</td></tr>';
+/* --- LISTAR CLIENTES --- */
+async function listarClientes() {
+    try {
+        const empresaId = window.getEmpresaId();
+        const url = `${API_BASE_URL}/empresa/${empresaId}/clientes-todos`;
+        
+        const respuesta = await fetch(url, { headers: window.getAuthHeaders() });
+        if (!respuesta.ok) throw new Error("Error obteniendo clientes");
+        
+        const clientes = await respuesta.json();
+        cacheClientes = clientes || [];
+        renderizarTablaClientes(clientes);
+    } catch (error) {
+        console.error("Error al listar clientes:", error);
+    }
+}
 
-  try {
-    const empresaId = window.getEmpresaId();
-    if (!empresaId) throw new Error("No se identificó la empresa.");
-    const url = `${API_BASE_URL}/empresa/${empresaId}/turnos`;
+/* --- RENDERIZADO DE CLIENTES COMO CARDS --- */
+function renderizarTablaClientes(clientes) {
+    const container = document.getElementById("container-gestion-clientes");
+    if (!container) return;
+    container.innerHTML = "";
 
-    const respuesta = await fetch(url, {
-      headers: window.getAuthHeaders(),
-    });
-
-    if (respuesta.status === 401) {
-      window.location.href = "login.html";
-      return;
+    if (!clientes || clientes.length === 0) {
+        container.innerHTML = '<p class="help-text">No hay clientes registrados</p>';
+        return;
     }
 
-    if (!respuesta.ok)
-      throw new Error("Error al conectar con la API de turnos");
-
-    const turnos = await respuesta.json();
-
-    const clientesMap = {};
-
-    turnos.forEach((t) => {
-      const nombre = t.cliente_name || "Anónimo";
-
-      if (!clientesMap[nombre]) {
-        clientesMap[nombre] = {
-          nombre: nombre,
-          visitas: 0,
-          ultimaVisita: t.start_datetime,
-          servicios: new Set(),
-        };
-      }
-
-      const estado = (t.status || t.estado || "").toLowerCase();
-      if (estado !== "cancelado") {
-        clientesMap[nombre].visitas++;
-      }
-
-      if (t.start_datetime > clientesMap[nombre].ultimaVisita) {
-        clientesMap[nombre].ultimaVisita = t.start_datetime;
-      }
-
-      const servNombre =
-        t.servicio_nombre ||
-        (t.servicio_id ? `Servicio ${t.servicio_id}` : null);
-      if (servNombre) {
-        clientesMap[nombre].servicios.add(servNombre);
-      }
-    });
-
-    const clientesArray = Object.values(clientesMap);
-    clientesArray.sort((a, b) => b.visitas - a.visitas);
-
-    renderizarTablaClientes(clientesArray);
-  } catch (error) {
-    console.error("Error listando clientes:", error);
-    if (tbody)
-      tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align:center; color:red">Error cargando datos</td></tr>';
-  }
-}
-/* --- RENDERIZADO DE INTERFAZ --- */
-function renderizarTablaClientes(clientes) {
-  const tbody = document.getElementById("tabla-gestion-clientes");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  if (clientes.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" style="text-align:center">No se encontraron clientes en el historial.</td></tr>';
-    return;
-  }
-
-  const fragmento = document.createDocumentFragment();
-
-  clientes.forEach((c) => {
-    const fechaObj = new Date(c.ultimaVisita);
-    const fechaStr = !isNaN(fechaObj)
-      ? fechaObj.toLocaleDateString("es-AR")
-      : "-";
-    const serviciosStr = Array.from(c.servicios).join(", ") || "Ninguno";
-
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-            <td><strong>${c.nombre}</strong></td>
-            <td>${c.visitas}</td>
-            <td>${fechaStr}</td>
-            <td><small>${serviciosStr}</small></td>
+    clientes.forEach(cliente => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        
+        card.innerHTML = `
+            <div class="item-card-header">
+                <h3>👤 ${cliente.nombre} ${cliente.apellido}</h3>
+            </div>
+            <div class="item-card-body">
+                <div class="info-item">
+                    <strong>DNI:</strong>
+                    <span>${cliente.dni}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Email:</strong>
+                    <span>${cliente.email || 'No registrado'}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Teléfono:</strong>
+                    <span>${cliente.telefono || 'No registrado'}</span>
+                </div>
+            </div>
+            <div class="item-card-footer">
+                <button class="btn-primary btn-sm" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
+                <button class="btn-danger btn-sm" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+            </div>
         `;
-    fragmento.appendChild(fila);
-  });
-
-  tbody.appendChild(fragmento);
+        
+        container.appendChild(card);
+    });
 }
 
+/* --- MODALES --- */
+function abrirModalCliente() {
+    const form = document.getElementById("formCliente");
+    if (form) form.reset();
+    document.getElementById("clienteId").value = "";
+    document.getElementById("modalTitleCliente").textContent = "Nuevo Cliente";
+    document.getElementById("modalCliente").style.display = "flex";
+}
+
+function cerrarModalCliente() {
+    document.getElementById("modalCliente").style.display = "none";
+}
+
+function editarCliente(id) {
+    const cliente = cacheClientes.find(c => c.id === id);
+    if (!cliente) return;
+
+    document.getElementById("clienteId").value = cliente.id;
+    document.getElementById("cliDni").value = cliente.dni;
+    document.getElementById("cliNombre").value = cliente.nombre;
+    document.getElementById("cliApellido").value = cliente.apellido;
+    document.getElementById("cliEmail").value = cliente.email || "";
+    document.getElementById("cliTelefono").value = cliente.telefono || "";
+    document.getElementById("cliPassword").value = ""; // No mostrar password hash
+    
+    document.getElementById("modalTitleCliente").textContent = "Editar Cliente";
+    document.getElementById("modalCliente").style.display = "flex";
+}
+
+async function eliminarCliente(id) {
+    if (!confirm("¿Estás seguro de que deseas eliminar este cliente? Se mantendrá el historial de sus turnos pasados pero el registro del ciudadano será borrado.")) return;
+
+    const empresaId = window.getEmpresaId();
+    const url = `${API_BASE_URL}/empresa/${empresaId}/cliente/${id}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: window.getAuthHeaders()
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Cliente eliminado exitosamente");
+            listarClientes();
+            if (window.cargarClientesExistentes) window.cargarClientesExistentes();
+        } else {
+            alert("Error: " + (data.message || "No se pudo eliminar"));
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
+}
+
+/* --- GUARDAR CLIENTE --- */
+async function guardarCliente(e) {
+    e.preventDefault();
+    
+    const empresaId = window.getEmpresaId();
+    const id = document.getElementById("clienteId").value;
+    
+    const datos = {
+        dni: document.getElementById("cliDni").value,
+        nombre: document.getElementById("cliNombre").value,
+        apellido: document.getElementById("cliApellido").value,
+        email: document.getElementById("cliEmail").value || null,
+        telefono: document.getElementById("cliTelefono").value || null
+    };
+
+    const password = document.getElementById("cliPassword").value;
+    if (password) {
+        datos.password = password;
+    }
+    
+    let url = `${API_BASE_URL}/empresa/${empresaId}/cliente`;
+    let metodo = 'POST';
+
+    if (id) {
+        url = `${API_BASE_URL}/empresa/${empresaId}/cliente/${id}`;
+        metodo = 'PUT';
+    }
+    
+    try {
+        const response = await fetch(url, {
+            method: metodo,
+            headers: window.getAuthHeaders(),
+            body: JSON.stringify(datos)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(id ? "Cliente actualizado exitosamente" : "Cliente registrado exitosamente");
+            cerrarModalCliente();
+            listarClientes();
+            // Actualizar lista en el modal de turnos si está abierto 
+            if (window.cargarClientesExistentes) window.cargarClientesExistentes(); 
+        } else {
+            alert("Error: " + (data.message || "No se pudo guardar"));
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    }
+}
+
+// Exportar globalmente
 window.cargarLogicaClientes = cargarLogicaClientes;
+window.abrirModalCliente = abrirModalCliente;
+window.cerrarModalCliente = cerrarModalCliente;
+window.editarCliente = editarCliente;
+window.eliminarCliente = eliminarCliente;

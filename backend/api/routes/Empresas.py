@@ -1,6 +1,7 @@
 from api import app
 from api.models.Empresas import Empresa
 from api.utils.seguridad import requiere_token
+from api.utils.rate_limit import rate_limit_login
 from flask import request, jsonify
 
 # ----------------------------
@@ -17,16 +18,17 @@ def registrar_empresa():
 
 
 # ----------------------------
-#   LOGIN
+#   LOGIN (Protegido contra fuerza bruta)
 # ----------------------------
 @app.route("/login", methods=["POST"])
+@rate_limit_login
 def login_empresa():
     auth = request.authorization
     try:
         empresa = Empresa.login(auth)
         return jsonify(empresa), 200
     except Exception as e:
-        return jsonify({"message": str(e)}), 400
+        return jsonify({"message": str(e)}), 401
 
 
 # ----------------------------

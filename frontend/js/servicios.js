@@ -26,47 +26,51 @@ async function listarServicios() {
     renderizarTablaServicios(servicios);
   } catch (error) {
     console.error("Error listando servicios:", error);
-    const tbody = document.getElementById("tabla-gestion-servicios");
-    if (tbody)
-      tbody.innerHTML =
-        '<tr><td colspan="5" style="text-align:center; color:red">Error cargando datos</td></tr>';
+    const container = document.getElementById("container-gestion-servicios");
+    if (container)
+      container.innerHTML = '<p class="help-text" style="color:red">Error cargando datos</p>';
   }
 }
 
-/* --- RENDERIZADO DE LA INTERFAZ --- */
+/* --- RENDERIZADO DE LA INTERFAZ COMO CARDS --- */
 function renderizarTablaServicios(lista) {
-  const tbody = document.getElementById("tabla-gestion-servicios");
-  if (!tbody) return;
+  const container = document.getElementById("container-gestion-servicios");
+  if (!container) return;
 
-  tbody.innerHTML = "";
+  container.innerHTML = "";
 
   if (lista.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="5" style="text-align:center">No hay servicios registrados.</td></tr>';
+    container.innerHTML = '<p class="help-text">No hay servicios registrados.</p>';
     return;
   }
 
-  const frag = document.createDocumentFragment();
   lista.forEach((s) => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-            <td><strong>${s.name}</strong></td>
-            <td>${s.duration_minutes} min</td>
-            <td>$${s.price}</td>
-            <td>${s.description || "-"}</td>
-            <td>
-                <button class="btn-action btn-sm" onclick="editarServicio(${
-                  s.id
-                })">✏️</button>
-                <button class="btn-action btn-sm btn-danger" onclick="eliminarServicio(${
-                  s.id
-                })">🗑️</button>
-            </td>
-        `;
-    frag.appendChild(fila);
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    
+    card.innerHTML = `
+      <div class="item-card-header">
+        <h3>💼 ${s.name}</h3>
+        <span class="badge-precio">$${s.price}</span>
+      </div>
+      <div class="item-card-body">
+        <div class="info-item">
+          <strong>Duración:</strong>
+          <span>${s.duration_minutes} minutos</span>
+        </div>
+        <div class="info-item">
+          <strong>Descripción:</strong>
+          <span>${s.description || 'Sin descripción'}</span>
+        </div>
+      </div>
+      <div class="item-card-footer">
+        <button class="btn-primary btn-sm" onclick="editarServicio(${s.id})">✏️ Editar</button>
+        <button class="btn-danger btn-sm" onclick="eliminarServicio(${s.id})">🗑️ Eliminar</button>
+      </div>
+    `;
+    
+    container.appendChild(card);
   });
-
-  tbody.appendChild(frag);
 }
 
 /* --- GUARDAR NUEVO O EDITAR SERVICIO --- */

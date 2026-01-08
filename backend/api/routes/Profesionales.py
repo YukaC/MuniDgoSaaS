@@ -1,7 +1,15 @@
+"""
+Rutas de API para Profesionales - Refactorizado con DRY y Cache
+"""
 from flask import request, jsonify
+
+from api import app
 from api.models.Profesionales import Profesional
 from api.utils.seguridad import requiere_token, misma_empresa
-from api import app
+from api.utils.db_helpers import get_db_cursor, validate_profesional_empresa, DIAS_SEMANA
+from api.cache.cache_manager import cache_manager
+from api.cache.cache_keys import CacheKeys
+
 
 # ---------------------- OBTENER TODOS ----------------------
 @app.route('/profesionales', methods=['GET'])
@@ -18,8 +26,18 @@ def obtener_profesionales():
 @app.route('/empresa/<int:id_empresa>/profesionales', methods=['GET'])
 @requiere_token
 def obtener_profesionales_por_empresa(id_empresa):
+    # Intentar obtener del cache
+    cache_key = CacheKeys.profesionales_empresa(id_empresa)
+    cached_result = cache_manager.get(cache_key)
+    if cached_result is not None:
+        return jsonify(cached_result), 200
+    
     try:
         profesionales = Profesional.get_profesionales_by_idempresa(id_empresa)
+        
+        # Guardar en cache (5 minutos)
+        cache_manager.set(cache_key, profesionales, CacheKeys.TTL_LONG)
+        
         return jsonify(profesionales), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500
@@ -29,7 +47,7 @@ def obtener_profesionales_por_empresa(id_empresa):
 @app.route('/empresa/<int:id_empresa>/profesional/<int:id>', methods=['GET'])
 @requiere_token
 @misma_empresa(tabla='profesionales')
-def obtener_profesional(id,id_empresa):
+def obtener_profesional(id, id_empresa):
     try:
         profesional = Profesional.get_profesional_by_id(id)
         if profesional is None:
@@ -45,11 +63,14 @@ def obtener_profesional(id,id_empresa):
 @requiere_token
 def crear_profesional():
     datos = request.get_json()
-
     datos['empresa_id'] = int(request.headers['id-empresa'])
 
     try:
         nuevo = Profesional.create_profesional(datos)
+        
+        # Invalidar cache
+        cache_manager.invalidate(CacheKeys.invalidar_profesionales(datos['empresa_id']))
+        
         return jsonify(nuevo), 201
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
@@ -61,13 +82,16 @@ def crear_profesional():
 @app.route('/empresa/<int:id_empresa>/profesional/<int:id>', methods=['PUT'])
 @requiere_token
 @misma_empresa(tabla='profesionales')
-def actualizar_profesional(id_empresa,id):
+def actualizar_profesional(id_empresa, id):
     datos = request.get_json()
-
     datos['empresa_id'] = int(id_empresa)
 
     try:
         actualizado = Profesional.update_profesional(id, datos)
+        
+        # Invalidar cache
+        cache_manager.invalidate(CacheKeys.invalidar_profesionales(id_empresa))
+        
         return jsonify(actualizado), 200
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
@@ -79,11 +103,44 @@ def actualizar_profesional(id_empresa,id):
 @app.route('/empresa/<int:id_empresa>/profesional/<int:id>', methods=['DELETE'])
 @requiere_token
 @misma_empresa(tabla='profesionales')
-def eliminar_profesional(id_empresa,id):
+def eliminar_profesional(id_empresa, id):
     try:
         eliminado = Profesional.delete_profesional(id)
+        
+        # Invalidar cache
+        cache_manager.invalidate(CacheKeys.invalidar_profesionales(id_empresa))
+        
         return jsonify(eliminado), 200
     except ValueError as e:
         return jsonify({"message": str(e)}), 404
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
+# ---------------------- OBTENER DÍAS DISPONIBLES DE UN PROFESIONAL ----------------------
+@app.route('/empresa/<int:id_empresa>/profesional/<int:id_profesional>/dias-disponibles', methods=['GET'])
+@requiere_token
+def obtener_dias_disponibles_profesional_admin(id_empresa, id_profesional):
+    """Endpoint que devuelve los días de la semana en que trabaja un profesional"""
+    
+    # Validar profesional
+    if not validate_profesional_empresa(id_profesional, id_empresa):
+        return jsonify({"message": "Profesional no encontrado"}), 404
+    
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT day_of_week FROM disponibilidades 
+                WHERE profesional_id = %s 
+                ORDER BY day_of_week
+            """, (id_profesional,))
+            dias = [row[0] for row in cursor.fetchall()]
+        
+        dias_info = [
+            {"dia_numero": dia, "dia_nombre": DIAS_SEMANA.get(dia, "Desconocido")} 
+            for dia in dias
+        ]
+        
+        return jsonify({"dias_disponibles": dias_info}), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500

@@ -1,4 +1,8 @@
-from api.db.db_config import get_db_connection
+"""
+Modelo Servicio - Refactorizado con Connection Pooling
+"""
+from api.utils.db_helpers import get_db_cursor
+
 
 class Servicio:
 
@@ -18,8 +22,6 @@ class Servicio:
         for key in cls.schema:
             if key not in datos:
                 return False
-            # Permitimos que description sea None si viene de la DB, 
-            # pero en validación de entrada estricta esperamos str (aunque sea vacía)
             if type(datos[key]) != cls.schema[key]:
                 return False
         return True
@@ -48,32 +50,23 @@ class Servicio:
 
     @classmethod
     def get_servicio_by_id(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
-        fila = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
+            fila = cursor.fetchone()
         return Servicio(fila).to_json() if fila else None
 
     @classmethod
     def get_servicios(cls):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM servicios")
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM servicios")
+            filas = cursor.fetchall()
         return [Servicio(fila).to_json() for fila in filas] if filas else []
     
     @classmethod
     def get_servicios_by_idempresa(cls, empresa_id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM servicios WHERE empresa_id = %s", (empresa_id,))
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM servicios WHERE empresa_id = %s", (empresa_id,))
+            filas = cursor.fetchall()
         return [Servicio(fila).to_json() for fila in filas] if filas else []
 
     @classmethod
@@ -81,32 +74,25 @@ class Servicio:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            # --- VALIDACIÓN DE DUPLICADOS ---
+            cursor.execute("SELECT id FROM servicios WHERE name = %s", (datos["name"],))
+            if cursor.fetchone():
+                raise ValueError("El nombre del servicio ya existe")
 
-        # --- VALIDACIÓN DE DUPLICADOS ---
-        # Verificamos si ya existe un servicio con el mismo nombre
-        cursor.execute("SELECT id FROM servicios WHERE name = %s", (datos["name"],))
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El nombre del servicio ya existe")
-        # --- FIN VALIDACIÓN ---
-
-        cursor.execute(
-            """INSERT INTO servicios 
-               (empresa_id, name, duration_minutes, price, description, created_at) 
-               VALUES (%s, %s, %s, %s, %s, NOW())""",
-            (datos["empresa_id"], datos["name"], datos["duration_minutes"], 
-             datos["price"], datos["description"])
-        )
-        connection.commit()
-        nuevo_id = cursor.lastrowid
-        
-        cursor.execute("SELECT * FROM servicios WHERE id = %s", (nuevo_id,))
-        nuevo = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            # --- INSERCIÓN ---
+            cursor.execute(
+                """INSERT INTO servicios 
+                   (empresa_id, name, duration_minutes, price, description, created_at) 
+                   VALUES (%s, %s, %s, %s, %s, NOW())""",
+                (datos["empresa_id"], datos["name"], datos["duration_minutes"], 
+                 datos["price"], datos["description"])
+            )
+            nuevo_id = cursor.lastrowid
+            
+            cursor.execute("SELECT * FROM servicios WHERE id = %s", (nuevo_id,))
+            nuevo = cursor.fetchone()
+            
         return Servicio(nuevo).to_json()
 
     @classmethod
@@ -114,58 +100,43 @@ class Servicio:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT id FROM servicios WHERE id = %s", (id,))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el recurso")
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM servicios WHERE id = %s", (id,))
+            if not cursor.fetchone():
+                raise ValueError("No existe el recurso")
 
-        # --- VALIDACIÓN DE DUPLICADOS PARA UPDATE ---
-        # Verificamos si ya existe un servicio con el mismo nombre, EXCLUYENDO el actual
-        cursor.execute("SELECT id FROM servicios WHERE name = %s AND id != %s", (datos["name"], id))
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El nombre del servicio ya existe")
-        # --- FIN VALIDACIÓN ---
+            # --- VALIDACIÓN DE DUPLICADOS PARA UPDATE ---
+            cursor.execute("SELECT id FROM servicios WHERE name = %s AND id != %s", (datos["name"], id))
+            if cursor.fetchone():
+                raise ValueError("El nombre del servicio ya existe")
 
-        cursor.execute(
-            """UPDATE servicios SET 
-               empresa_id=%s, name=%s, duration_minutes=%s, price=%s, description=%s 
-               WHERE id=%s""",
-            (datos["empresa_id"], datos["name"], datos["duration_minutes"], 
-             datos["price"], datos["description"], id)
-        )
-        connection.commit()
-        
-        cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
-        actualizado = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            # --- ACTUALIZACIÓN ---
+            cursor.execute(
+                """UPDATE servicios SET 
+                   empresa_id=%s, name=%s, duration_minutes=%s, price=%s, description=%s 
+                   WHERE id=%s""",
+                (datos["empresa_id"], datos["name"], datos["duration_minutes"], 
+                 datos["price"], datos["description"], id)
+            )
+            
+            cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
+            actualizado = cursor.fetchone()
+            
         return Servicio(actualizado).to_json()
 
     @classmethod
     def delete_servicio(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
-        eliminado = cursor.fetchone()
-        if not eliminado:
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el recurso")
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM servicios WHERE id = %s", (id,))
+            eliminado = cursor.fetchone()
+            if not eliminado:
+                raise ValueError("No existe el recurso")
 
-        # --- ELIMINACIÓN EN CASCADA MANUAL ---
-        # Eliminar todos los turnos asociados a este servicio
-        cursor.execute("DELETE FROM turnos WHERE servicio_id = %s", (id,))
+            # --- ELIMINACIÓN EN CASCADA ---
+            # Eliminar turnos asociados (o poner servicio_id = NULL)
+            cursor.execute("UPDATE turnos SET servicio_id = NULL WHERE servicio_id = %s", (id,))
 
-        # Eliminar el servicio
-        cursor.execute("DELETE FROM servicios WHERE id = %s", (id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
+            # Eliminar el servicio
+            cursor.execute("DELETE FROM servicios WHERE id = %s", (id,))
+            
         return Servicio(eliminado).to_json()

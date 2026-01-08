@@ -28,39 +28,48 @@ async function listarProfesionales() {
   }
 }
 
-/* --- ACTUALIZACION DE LA INTERFAZ --- */
+/* --- ACTUALIZACION DE LA INTERFAZ COMO CARDS --- */
 function renderizarTablaProfesionales(lista) {
-  const tbody = document.getElementById("tabla-gestion-profesionales");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  const container = document.getElementById("container-gestion-profesionales");
+  if (!container) return;
+  container.innerHTML = "";
 
   if (lista.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="5" style="text-align:center">No hay profesionales registrados.</td></tr>';
+    container.innerHTML = '<p class="help-text">No hay profesionales registrados.</p>';
     return;
   }
 
-  const frag = document.createDocumentFragment();
   lista.forEach((p) => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-            <td><strong>${p.name} ${p.surname}</strong><br><small style="color:#666">${p.especialidad || "Consulta General"}</small></td>
-            <td>${p.matricula || "-"}</td>
-            <td>${p.dni || "-"}</td>
-            <td>${p.email || "-"}</td>
-            <td>
-                <button class="btn-action btn-sm" onclick="editarProfesional(${
-                  p.id
-                })">✏️</button>
-                <button class="btn-action btn-sm btn-danger" onclick="eliminarProfesional(${
-                  p.id
-                })">🗑️</button>
-            </td>
-        `;
-    frag.appendChild(fila);
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    
+    card.innerHTML = `
+      <div class="item-card-header">
+        <h3>👨‍⚕️ ${p.name} ${p.surname}</h3>
+        <span class="badge-especialidad">${p.especialidad || "Consulta General"}</span>
+      </div>
+      <div class="item-card-body">
+        <div class="info-item">
+          <strong>Matrícula:</strong>
+          <span>${p.matricula || 'No registrada'}</span>
+        </div>
+        <div class="info-item">
+          <strong>DNI:</strong>
+          <span>${p.dni || 'No registrado'}</span>
+        </div>
+        <div class="info-item">
+          <strong>Email:</strong>
+          <span>${p.email || 'No registrado'}</span>
+        </div>
+      </div>
+      <div class="item-card-footer">
+        <button class="btn-primary btn-sm" onclick="editarProfesional(${p.id})">✏️ Editar</button>
+        <button class="btn-danger btn-sm" onclick="eliminarProfesional(${p.id})">🗑️ Eliminar</button>
+      </div>
+    `;
+    
+    container.appendChild(card);
   });
-
-  tbody.appendChild(frag);
 }
 
 /* --- GUARDAR NUEVO O EDITAR PROFESIONAL --- */

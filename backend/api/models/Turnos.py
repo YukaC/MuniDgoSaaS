@@ -1,4 +1,9 @@
-from api.db.db_config import get_db_connection
+"""
+Modelo Turno - Refactorizado con Connection Pooling
+"""
+from api.utils.db_helpers import get_db_cursor
+from api.utils.formatters import format_turno_row
+
 
 class Turno:
 
@@ -69,29 +74,20 @@ class Turno:
 
     @classmethod
     def get_turno_by_id(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
-        fila = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
+            fila = cursor.fetchone()
         return Turno(fila).to_json() if fila else None
 
     @classmethod
     def get_turnos(cls):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM turnos")
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM turnos")
+            filas = cursor.fetchall()
         return [Turno(fila).to_json() for fila in filas] if filas else []
     
     @classmethod
     def get_turnos_by_idempresa(cls, empresa_id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
         query = """
             SELECT 
                 t.id, 
@@ -112,13 +108,18 @@ class Turno:
             LEFT JOIN profesionales p ON t.profesional_id = p.id
             LEFT JOIN servicios s ON t.servicio_id = s.id
             WHERE t.empresa_id = %s
-            ORDER BY t.start_datetime ASC
+            ORDER BY 
+                CASE 
+                    WHEN t.status = 'Pendiente de Confirmación' THEN 0
+                    WHEN t.status = 'Reservado' THEN 1
+                    ELSE 2
+                END,
+                t.start_datetime ASC
         """
         
-        cursor.execute(query, (empresa_id,))
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute(query, (empresa_id,))
+            filas = cursor.fetchall()
 
         resultados = []
         for fila in filas:
@@ -126,7 +127,6 @@ class Turno:
             turno_base = Turno(fila).to_json()
             
             # Agregamos los datos extra obtenidos del JOIN
-            # Ahora incluye observaciones (columna 5) y especialidad
             turno_base["profesional_nombre"] = fila[9] if len(fila) > 9 else None
             turno_base["profesional_apellido"] = fila[10] if len(fila) > 10 else None
             turno_base["profesional_especialidad"] = fila[11] if len(fila) > 11 else "Consulta General"
@@ -146,87 +146,44 @@ class Turno:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        # 0. Validar que la fecha/hora no sea en el pasado
-        from datetime import datetime
-        try:
-            fecha_hora_turno = datetime.strptime(datos["start_datetime"], '%Y-%m-%d %H:%M:%S')
-            ahora = datetime.now()
-            
-            if fecha_hora_turno <= ahora:
-                cursor.close()
-                connection.close()
-                raise ValueError("No se pueden agendar turnos en el pasado")
-        except ValueError as e:
-            if "No se pueden agendar" in str(e):
-                raise
-            # Si es error de formato, continuar (se validará después)
-
         # 1. Obtener la duración del servicio o usar duración por defecto
-        duracion_nueva = 30  # Duración por defecto en minutos
-        
-        if datos.get("servicio_id"):
-            cursor.execute("SELECT duration_minutes FROM servicios WHERE id = %s", (datos["servicio_id"],))
-            servicio = cursor.fetchone()
+        duracion_nueva = cls._get_duracion_servicio(datos)
+
+        with get_db_cursor() as cursor:
+            # 2. VALIDACIÓN DE SUPERPOSICIÓN DE TURNOS
+            cursor.execute(
+                """SELECT t.id FROM turnos t
+                   LEFT JOIN servicios s ON t.servicio_id = s.id
+                   WHERE t.profesional_id = %s
+                   AND t.status != 'Cancelado'
+                   AND t.start_datetime < DATE_ADD(%s, INTERVAL %s MINUTE)
+                   AND DATE_ADD(t.start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) > %s""",
+                (datos["profesional_id"], datos["start_datetime"], duracion_nueva, datos["start_datetime"])
+            )
             
-            if not servicio:
-                cursor.close()
-                connection.close()
-                raise ValueError("El servicio seleccionado no existe")
-                
-            duracion_nueva = servicio[0]
-        else:
-            # Si no hay servicio_id, obtener duración por defecto según especialidad del profesional
-            cursor.execute("SELECT especialidad FROM profesionales WHERE id = %s", (datos["profesional_id"],))
-            prof = cursor.fetchone()
-            if prof:
-                # Duración por defecto según especialidad (puedes ajustar estos valores)
-                especialidad = prof[0] or "Consulta General"
-                if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
-                    duracion_nueva = 45
-                elif "Cirugía" in especialidad:
-                    duracion_nueva = 60
-                else:
-                    duracion_nueva = 30
+            if cursor.fetchone():
+                raise ValueError("El profesional ya tiene un turno asignado en ese horario")
 
-        # 2. VALIDACIÓN DE SUPERPOSICIÓN DE TURNOS
-        # Buscamos turnos existentes del mismo profesional que se superpongan.
-        # Si el turno tiene servicio, usamos su duración, sino usamos 30 minutos por defecto
-        cursor.execute(
-            """SELECT t.id FROM turnos t
-               LEFT JOIN servicios s ON t.servicio_id = s.id
-               WHERE t.profesional_id = %s
-               AND t.status != 'Cancelado'
-               AND t.start_datetime < DATE_ADD(%s, INTERVAL %s MINUTE)
-               AND DATE_ADD(t.start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) > %s""",
-            (datos["profesional_id"], datos["start_datetime"], duracion_nueva, datos["start_datetime"])
-        )
-        
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El profesional ya tiene un turno asignado en ese horario")
-
-        # 3. Insertar si no hay conflictos
-        observaciones = datos.get("observaciones") or None
-        servicio_id = datos.get("servicio_id") or None
-        
-        cursor.execute(
-            """INSERT INTO turnos 
-               (empresa_id, profesional_id, servicio_id, cliente_name, observaciones, start_datetime, status, created_at) 
-               VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())""",
-            (datos["empresa_id"], datos["profesional_id"], servicio_id, 
-             datos["cliente_name"], observaciones, datos["start_datetime"], datos["status"])
-        )
-        connection.commit()
-        nuevo_id = cursor.lastrowid
-        
-        cursor.execute("SELECT * FROM turnos WHERE id = %s", (nuevo_id,))
-        nuevo = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            # 3. Insertar si no hay conflictos
+            observaciones = datos.get("observaciones") or None
+            servicio_id = datos.get("servicio_id") or None
+            
+            cursor.execute(
+                """INSERT INTO turnos 
+                   (empresa_id, profesional_id, servicio_id, cliente_name, observaciones, start_datetime, status, created_at) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())""",
+                (datos["empresa_id"], datos["profesional_id"], servicio_id, 
+                 datos["cliente_name"], observaciones, datos["start_datetime"], datos["status"])
+            )
+            nuevo_id = cursor.lastrowid
+            
+            # Programar email de confirmación (15 mins de retardo)
+            from api.utils.email_utils import programar_email_confirmacion
+            programar_email_confirmacion(nuevo_id)
+            
+            cursor.execute("SELECT * FROM turnos WHERE id = %s", (nuevo_id,))
+            nuevo = cursor.fetchone()
+            
         return Turno(nuevo).to_json()
 
     @classmethod
@@ -234,119 +191,85 @@ class Turno:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT id FROM turnos WHERE id = %s", (id,))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el turno")
+        # 1. Obtener duración del servicio
+        duracion_nueva = cls._get_duracion_servicio(datos)
 
-        # Validar que la fecha/hora no sea en el pasado (solo si se está cambiando la fecha/hora)
-        # Si solo se está cambiando el estado, permitir incluso si el turno ya pasó
-        from datetime import datetime
-        try:
-            # Obtener el turno original para comparar
-            cursor.execute("SELECT start_datetime FROM turnos WHERE id = %s", (id,))
-            turno_original = cursor.fetchone()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM turnos WHERE id = %s", (id,))
+            if not cursor.fetchone():
+                raise ValueError("No existe el turno")
+
+            # 2. VALIDACIÓN DE SUPERPOSICIÓN (UPDATE)
+            cursor.execute(
+                """SELECT t.id FROM turnos t
+                   LEFT JOIN servicios s ON t.servicio_id = s.id
+                   WHERE t.profesional_id = %s
+                   AND t.status != 'Cancelado'
+                   AND t.id != %s
+                   AND t.start_datetime < DATE_ADD(%s, INTERVAL %s MINUTE)
+                   AND DATE_ADD(t.start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) > %s""",
+                (datos["profesional_id"], id, datos["start_datetime"], duracion_nueva, datos["start_datetime"])
+            )
+
+            if cursor.fetchone():
+                raise ValueError("El profesional ya tiene un turno asignado en ese horario")
+
+            # 3. Update
+            observaciones = datos.get("observaciones") or None
+            servicio_id = datos.get("servicio_id") or None
             
-            if turno_original and "start_datetime" in datos:
-                fecha_original = turno_original[0]
-                fecha_nueva = datetime.strptime(datos["start_datetime"], '%Y-%m-%d %H:%M:%S')
-                
-                # Solo validar si se está cambiando la fecha/hora
-                if isinstance(fecha_original, str):
-                    fecha_original = datetime.strptime(fecha_original, '%Y-%m-%d %H:%M:%S')
-                
-                if fecha_nueva != fecha_original:
-                    # Se está cambiando la fecha/hora, validar que no sea en el pasado
-                    ahora = datetime.now()
-                    if fecha_nueva <= ahora:
-                        cursor.close()
-                        connection.close()
-                        raise ValueError("No se pueden reprogramar turnos a fechas/horas pasadas")
-        except ValueError as e:
-            if "No se pueden" in str(e):
-                raise
-            # Si es otro tipo de ValueError (formato inválido), continuar
-
-        # 1. Obtener duración del servicio o usar duración por defecto
-        duracion_nueva = 30  # Duración por defecto
-        
-        if datos.get("servicio_id"):
-            cursor.execute("SELECT duration_minutes FROM servicios WHERE id = %s", (datos["servicio_id"],))
-            servicio = cursor.fetchone()
-            if not servicio:
-                cursor.close()
-                connection.close()
-                raise ValueError("El servicio seleccionado no existe")
-            duracion_nueva = servicio[0]
-        else:
-            # Si no hay servicio_id, obtener duración por defecto según especialidad
-            cursor.execute("SELECT especialidad FROM profesionales WHERE id = %s", (datos["profesional_id"],))
-            prof = cursor.fetchone()
-            if prof:
-                especialidad = prof[0] or "Consulta General"
-                if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
-                    duracion_nueva = 45
-                elif "Cirugía" in especialidad:
-                    duracion_nueva = 60
-                else:
-                    duracion_nueva = 30
-
-        # 2. VALIDACIÓN DE SUPERPOSICIÓN (UPDATE)
-        # Excluimos el ID actual (AND t.id != %s) para permitir guardar cambios en el mismo turno
-        cursor.execute(
-            """SELECT t.id FROM turnos t
-               LEFT JOIN servicios s ON t.servicio_id = s.id
-               WHERE t.profesional_id = %s
-               AND t.status != 'Cancelado'
-               AND t.id != %s
-               AND t.start_datetime < DATE_ADD(%s, INTERVAL %s MINUTE)
-               AND DATE_ADD(t.start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) > %s""",
-            (datos["profesional_id"], id, datos["start_datetime"], duracion_nueva, datos["start_datetime"])
-        )
-
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El profesional ya tiene un turno asignado en ese horario")
-
-        # 3. Update
-        observaciones = datos.get("observaciones") or None
-        servicio_id = datos.get("servicio_id") or None
-        
-        cursor.execute(
-            """UPDATE turnos SET 
-               empresa_id=%s, profesional_id=%s, servicio_id=%s, cliente_name=%s, observaciones=%s, start_datetime=%s, status=%s 
-               WHERE id=%s""",
-            (datos["empresa_id"], datos["profesional_id"], servicio_id, 
-             datos["cliente_name"], observaciones, datos["start_datetime"], datos["status"], id)
-        )
-        connection.commit()
-        
-        cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
-        actualizado = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            cursor.execute(
+                """UPDATE turnos SET 
+                   empresa_id=%s, profesional_id=%s, servicio_id=%s, cliente_name=%s, observaciones=%s, start_datetime=%s, status=%s 
+                   WHERE id=%s""",
+                (datos["empresa_id"], datos["profesional_id"], servicio_id, 
+                 datos["cliente_name"], observaciones, datos["start_datetime"], datos["status"], id)
+            )
+            
+            cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
+            actualizado = cursor.fetchone()
+            
         return Turno(actualizado).to_json()
         
     @classmethod
     def delete_turno(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
-        eliminado = cursor.fetchone()
-        if not eliminado:
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el turno")
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM turnos WHERE id = %s", (id,))
+            eliminado = cursor.fetchone()
+            if not eliminado:
+                raise ValueError("No existe el turno")
 
-        # En Turnos no hay dependencias hijas que eliminar, así que el borrado es directo
-        cursor.execute("DELETE FROM turnos WHERE id = %s", (id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
+            cursor.execute("DELETE FROM turnos WHERE id = %s", (id,))
+            
         return Turno(eliminado).to_json()
+
+    # ----------------- HELPERS PRIVADOS ----------------- #
+    
+    @classmethod
+    def _get_duracion_servicio(cls, datos):
+        """Obtiene la duración del servicio o calcula por defecto según especialidad"""
+        duracion_nueva = 30  # Por defecto
+        
+        with get_db_cursor() as cursor:
+            if datos.get("servicio_id"):
+                cursor.execute("SELECT duration_minutes FROM servicios WHERE id = %s", (datos["servicio_id"],))
+                servicio = cursor.fetchone()
+                
+                if not servicio:
+                    raise ValueError("El servicio seleccionado no existe")
+                    
+                duracion_nueva = servicio[0]
+            else:
+                # Si no hay servicio_id, obtener duración por defecto según especialidad
+                cursor.execute("SELECT especialidad FROM profesionales WHERE id = %s", (datos["profesional_id"],))
+                prof = cursor.fetchone()
+                if prof:
+                    especialidad = prof[0] or "Consulta General"
+                    if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
+                        duracion_nueva = 45
+                    elif "Cirugía" in especialidad:
+                        duracion_nueva = 60
+                    else:
+                        duracion_nueva = 30
+        
+        return duracion_nueva

@@ -19,10 +19,9 @@ async function cargarLogicaDisponibilidades() {
 
 /* --- CARGA DE DATOS--- */
 async function cargarDatosIniciales() {
-  const tbody = document.getElementById("tabla-gestion-disponibilidades");
-  if (tbody)
-    tbody.innerHTML =
-      '<tr><td colspan="3" style="text-align:center;">Cargando datos...</td></tr>';
+  const container = document.getElementById("container-gestion-disponibilidades");
+  if (container)
+    container.innerHTML = '<p class="help-text">Cargando datos...</p>';
 
   try {
     const empresaId = window.getEmpresaId();
@@ -52,19 +51,18 @@ async function cargarDatosIniciales() {
     renderizarTablaPrincipal(todasDisponibilidades);
   } catch (error) {
     console.error("Error cargando disponibilidades:", error);
-    if (tbody)
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:red">Error: ${error.message}</td></tr>`;
+    if (container)
+      container.innerHTML = `<p class="help-text" style="color:red">Error: ${error.message}</p>`;
   }
 }
-/* --- RENDERIZADO DE TABLA DE PROFESIONALES --- */
+/* --- RENDERIZADO DE PROFESIONALES COMO CARDS --- */
 function renderizarTablaPrincipal(disponibilidades) {
-  const tbody = document.getElementById("tabla-gestion-disponibilidades");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  const container = document.getElementById("container-gestion-disponibilidades");
+  if (!container) return;
+  container.innerHTML = "";
 
   if (cacheProfesionalesDisp.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="3" style="text-align:center;">No hay profesionales registrados.</td></tr>';
+    container.innerHTML = '<p class="help-text">No hay profesionales registrados.</p>';
     return;
   }
 
@@ -77,15 +75,13 @@ function renderizarTablaPrincipal(disponibilidades) {
     "Viernes",
     "Sábado",
   ];
-  const frag = document.createDocumentFragment();
 
   cacheProfesionalesDisp.forEach((prof) => {
     const susHorarios = disponibilidades.filter(
       (d) => d.profesional_id == prof.id
     );
 
-    let resumenHTML =
-      '<span style="color:#999; font-style:italic;">Sin horarios asignados</span>';
+    let resumenHTML = '<span style="color:#999; font-style:italic;">Sin horarios asignados</span>';
 
     if (susHorarios.length > 0) {
       susHorarios.sort(
@@ -97,29 +93,31 @@ function renderizarTablaPrincipal(disponibilidades) {
         const dia = diasSemana[h.day_of_week] || `Día ${h.day_of_week}`;
         const inicio = (h.start_time || "").substring(0, 5);
         const fin = (h.end_time || "").substring(0, 5);
-        return `<div style="font-size:0.9em; margin-bottom:2px;"><strong>${dia}:</strong> ${inicio} - ${fin}</div>`;
+        return `<div class="horario-item"><strong>${dia}:</strong> ${inicio} - ${fin}</div>`;
       });
       resumenHTML = lineas.join("");
     }
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-            <td>
-                <strong>${prof.name} ${prof.surname}</strong><br>
-                <small style="color:#666">${
-                  prof.matricula || prof.email || ""
-                }</small>
-            </td>
-            <td>${resumenHTML}</td>
-            <td>
-                <button class="btn-primary btn-sm" onclick="gestionarHorarios(${
-                  prof.id
-                })">⚙️ Editar</button>
-            </td>
-        `;
-    frag.appendChild(tr);
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    
+    card.innerHTML = `
+      <div class="item-card-header">
+        <h3>⏰ ${prof.name} ${prof.surname}</h3>
+        <span class="badge-especialidad">${prof.especialidad || "General"}</span>
+      </div>
+      <div class="item-card-body">
+        <div class="horarios-resumen">
+          ${resumenHTML}
+        </div>
+      </div>
+      <div class="item-card-footer">
+        <button class="btn-primary btn-sm" onclick="gestionarHorarios(${prof.id})">⚙️ Gestionar Horarios</button>
+      </div>
+    `;
+    
+    container.appendChild(card);
   });
-  tbody.appendChild(frag);
 }
 
 /* --- GESTION DE HORARIOS POR PROFESIONAL (MODAL) --- */

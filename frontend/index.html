@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <!-- Librería ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js"></script>
 </head>
+
 <body>
 
     <div class="app-wrapper">
@@ -32,7 +34,16 @@
 
         <main class="main-content">
             <header class="topbar">
+                <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
                 <h1>Panel de Control</h1>
+
+                <!-- Barra de búsqueda global -->
+                <div class="search-bar-container" id="searchBarContainer" style="display: none;">
+                    <input type="text" id="globalSearchInput" class="search-input" placeholder="Buscar..."
+                        oninput="filtrarContenido(this.value)">
+                    <button class="search-clear-btn" onclick="limpiarBusqueda()" title="Limpiar">✕</button>
+                </div>
+
                 <button class="logout-btn" id="logout">Cerrar Sesión</button>
             </header>
 
@@ -40,7 +51,7 @@
             <div class="page-content active-page" id="dashboard">
                 <h2 id="welcome-message">Bienvenido al Panel</h2>
                 <p class="help-text">Resumen de actividad del día.</p>
-                
+
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Citas Totales</h3>
@@ -62,11 +73,11 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Horario</th> 
+                                    <th>Horario</th>
                                     <th>Cliente</th>
-                                    <th>Profesional / Especialidad</th> 
+                                    <th>Profesional / Especialidad</th>
                                     <th>Estado</th>
-                                    <th>Observaciones</th> 
+                                    <th>Observaciones</th>
                                 </tr>
                             </thead>
                             <tbody id="shifts-table-body">
@@ -80,21 +91,23 @@
             <!-- SECCIÓN REPORTES -->
             <div class="page-content" id="reports" style="display: none;">
                 <h2>📊 Reportes y Métricas</h2>
-                
+
                 <!-- Barras de Progreso -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Tasa de Ocupación</h3>
                         <p id="rep-ocupacion-pct" class="kpi-number">0%</p>
                         <div class="progress-bg">
-                            <div id="bar-ocupacion" class="progress-fill" style="width: 0%; background-color: var(--success);"></div>
+                            <div id="bar-ocupacion" class="progress-fill"
+                                style="width: 0%; background-color: var(--success);"></div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <h3>Tasa de Cancelación</h3>
                         <p id="rep-cancelacion-pct" class="kpi-number">0%</p>
                         <div class="progress-bg">
-                            <div id="bar-cancelacion" class="progress-fill" style="width: 0%; background-color: var(--danger);"></div>
+                            <div id="bar-cancelacion" class="progress-fill"
+                                style="width: 0%; background-color: var(--danger);"></div>
                         </div>
                     </div>
                 </div>
@@ -151,43 +164,20 @@
                     <h2>📅 Gestión de Citas</h2>
                     <button class="btn-primary" style="width: auto;" onclick="abrirModalTurno()">+ Nuevo Turno</button>
                 </div>
-                <div class="recent-shifts">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Profesional</th>
-                                    <th>Servicio</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-gestion-turnos"></tbody>
-                        </table>
-                    </div>
+                <div class="turnos-container" id="container-gestion-turnos">
+                    <!-- Los turnos se cargarán aquí como cards -->
                 </div>
             </div>
 
             <!-- SECCIÓN CLIENTES -->
             <div class="page-content" id="view-clients" style="display: none;">
-                <h2>👥 Base de Clientes (Historial)</h2>
-                <p class="help-text">Lista generada automáticamente a partir del historial de turnos.</p>
-                <div class="recent-shifts">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Visitas Totales</th>
-                                    <th>Última Visita</th>
-                                    <th>Servicios Recibidos</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-gestion-clientes"></tbody>
-                        </table>
-                    </div>
+                <div class="flex-between">
+                    <h2>👥 Base de Clientes</h2>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalCliente()">+ Nuevo
+                        Cliente</button>
+                </div>
+                <div class="items-container" id="container-gestion-clientes">
+                    <!-- Los clientes se cargarán aquí como cards -->
                 </div>
             </div>
 
@@ -195,23 +185,11 @@
             <div class="page-content" id="view-professional" style="display: none;">
                 <div class="flex-between">
                     <h2>👨‍⚕️ Equipo de Profesionales</h2>
-                    <button class="btn-primary" style="width: auto;" onclick="abrirModalProfesional()">+ Nuevo Profesional</button>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalProfesional()">+ Nuevo
+                        Profesional</button>
                 </div>
-                <div class="recent-shifts">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Matrícula</th>
-                                    <th>DNI</th>
-                                    <th>Email</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-gestion-profesionales"></tbody>
-                        </table>
-                    </div>
+                <div class="items-container" id="container-gestion-profesionales">
+                    <!-- Los profesionales se cargarán aquí como cards -->
                 </div>
             </div>
 
@@ -219,23 +197,11 @@
             <div class="page-content" id="view-services" style="display: none;">
                 <div class="flex-between">
                     <h2>💼 Catálogo de Servicios</h2>
-                    <button class="btn-primary" style="width: auto;" onclick="abrirModalServicio()">+ Nuevo Servicio</button>
+                    <button class="btn-primary" style="width: auto;" onclick="abrirModalServicio()">+ Nuevo
+                        Servicio</button>
                 </div>
-                <div class="recent-shifts">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Duración</th>
-                                    <th>Precio</th>
-                                    <th>Descripción</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-gestion-servicios"></tbody>
-                        </table>
-                    </div>
+                <div class="items-container" id="container-gestion-servicios">
+                    <!-- Los servicios se cargarán aquí como cards -->
                 </div>
             </div>
 
@@ -243,34 +209,28 @@
             <div class="page-content" id="view-availability" style="display: none;">
                 <div class="flex-between">
                     <h2>⏰ Gestión de Disponibilidades</h2>
-                    <!-- Botón global eliminado como pediste -->
                 </div>
-
-                <!-- Filtro eliminado como pediste -->
-
-                <div class="recent-shifts">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Profesional</th>
-                                    <th>Resumen Horarios</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-gestion-disponibilidades">
-                                <!-- Se llena vía JS -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="items-container" id="container-gestion-disponibilidades">
+                    <!-- Las disponibilidades se cargarán aquí como cards -->
                 </div>
             </div>
+
+            <!-- Footer -->
+            <footer class="index-footer">
+                <div class="container">
+                    <p>&copy;
+                        <script>document.write(new Date().getFullYear())</script> Mi Turno - Municipalidad de Coronel
+                        Dorrego.
+                        Todos los derechos reservados.
+                    </p>
+                </div>
+            </footer>
 
         </main>
     </div>
 
     <!-- ================= MODALES ================= -->
-    
+
     <!-- Modal Turnos -->
     <div id="turnoModal" class="modal-overlay">
         <div class="modal-content">
@@ -280,22 +240,31 @@
             </div>
             <form id="formTurno">
                 <input type="hidden" id="turnoId">
-                
+
                 <div class="form-group">
                     <label>Cliente:</label>
                     <div id="clienteSearchContainer">
-                        <input type="text" id="clienteName" required placeholder="Buscar o escribir nombre del cliente..." 
-                               autocomplete="off" oninput="buscarClientesExistentes(this.value)">
+                        <input type="text" id="clienteName" required
+                            placeholder="Buscar o escribir nombre del cliente..." autocomplete="off"
+                            oninput="buscarClientesExistentes(this.value)">
                         <div id="clientesLista" class="clientes-lista" style="display: none;"></div>
-                        <small class="form-text" id="clienteHelpText">Escribe para buscar clientes existentes o crea uno nuevo</small>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                            <small class="form-text" id="clienteHelpText" style="margin: 0;">Escribe para buscar
+                                clientes existentes</small>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Profesional:</label>
                     <select id="selectProfesional" required>
                         <option value="">Cargando...</option>
                     </select>
+                    <small class="form-text" id="infoEspecialidad"
+                        style="display: none; color: #666; margin-top: 5px;"></small>
+                    <small class="form-text" id="infoDiasDisponibles"
+                        style="display: none; color: #007bff; margin-top: 2px;"></small>
                 </div>
 
                 <div class="form-group">
@@ -303,7 +272,8 @@
                     <select id="selectServicio">
                         <option value="">Consulta General (Automática)</option>
                     </select>
-                    <small class="form-text">Si no seleccionas un servicio, se usará la especialidad del profesional</small>
+                    <small class="form-text">Si no seleccionas un servicio, se usará la especialidad del
+                        profesional</small>
                 </div>
 
                 <div class="form-row">
@@ -321,7 +291,8 @@
 
                 <div class="form-group">
                     <label>Observaciones (Opcional):</label>
-                    <textarea id="observacionesTurno" rows="3" placeholder="Agregar consideraciones o información adicional..."></textarea>
+                    <textarea id="observacionesTurno" rows="3"
+                        placeholder="Agregar consideraciones o información adicional..."></textarea>
                 </div>
 
                 <div class="form-group">
@@ -353,17 +324,21 @@
                 <input type="hidden" id="profId">
                 <div class="form-group"><label>Nombre:</label><input type="text" id="profName" required></div>
                 <div class="form-group"><label>Apellido:</label><input type="text" id="profSurname" required></div>
-                <div class="form-group"><label>Especialidad:</label><input type="text" id="profEspecialidad" placeholder="Ej: Clínica General, Cardiología, etc." value="Consulta General"></div>
+                <div class="form-group"><label>Especialidad:</label><input type="text" id="profEspecialidad"
+                        placeholder="Ej: Clínica General, Cardiología, etc." value="Consulta General"></div>
                 <div class="form-group"><label>Matrícula:</label><input type="text" id="profMatricula" required></div>
                 <div class="form-group"><label>DNI:</label><input type="text" id="profDni" required></div>
                 <div class="form-group"><label>Email:</label><input type="email" id="profEmail" required></div>
-                
+
                 <!-- Sección para agregar horarios DENTRO del modal de profesional (opcional según tu lógica en profesionales.js) -->
-                <div id="secDisponibilidad" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                <div id="secDisponibilidad"
+                    style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
                     <h4 style="margin-bottom:10px;">Horarios de Atención</h4>
-                    <p id="msgGuardarPrimero" style="font-size:0.8em; color:orange; display:none;">Guarda el profesional primero para agregar horarios.</p>
-                    
-                    <div class="table-responsive" style="max-height: 150px; overflow-y:auto; margin-bottom:10px; border:1px solid #eee;">
+                    <p id="msgGuardarPrimero" style="font-size:0.8em; color:orange; display:none;">Guarda el profesional
+                        primero para agregar horarios.</p>
+
+                    <div class="table-responsive"
+                        style="max-height: 150px; overflow-y:auto; margin-bottom:10px; border:1px solid #eee;">
                         <table style="font-size:0.9em;">
                             <tbody id="tabla-disponibilidades"></tbody>
                         </table>
@@ -380,7 +355,7 @@
     </div>
 
     <!-- Modal Disponibilidad -->
-   <div id="modalDisponibilidad" class="modal-overlay">
+    <div id="modalDisponibilidad" class="modal-overlay">
         <div class="modal-content" style="max-width: 550px;">
             <div class="modal-header">
                 <h3 id="titleDisponibilidad">Gestionar Horarios</h3>
@@ -391,9 +366,11 @@
             <input type="hidden" id="dispProfesionalId">
 
             <!-- 1. Formulario para Agregar Nuevo Horario -->
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px;">
-                <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Agregar Rango Horario</h4>
-                
+            <div
+                style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Agregar Rango
+                    Horario</h4>
+
                 <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 10px;">
                     <div class="form-group" style="margin-bottom:0;">
                         <label style="font-size: 0.85em;">Día</label>
@@ -416,13 +393,16 @@
                         <input type="time" id="dispFin" required style="padding: 8px;">
                     </div>
                 </div>
-                
-                <button type="button" class="btn-primary" style="margin-top: 15px; width: 100%;" onclick="guardarDisponibilidad()">+ Agregar Horario</button>
+
+                <button type="button" class="btn-primary" style="margin-top: 15px; width: 100%;"
+                    onclick="guardarDisponibilidad()">+ Agregar Horario</button>
             </div>
 
             <!-- 2. Lista de Horarios Existentes (Se llena via JS) -->
-            <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Horarios Actuales</h4>
-            <div id="lista-horarios-modal-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+            <h4 style="margin-bottom: 10px; font-size: 0.9em; color: #555; text-transform: uppercase;">Horarios Actuales
+            </h4>
+            <div id="lista-horarios-modal-container"
+                style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
                 <!-- Aquí se inyecta la tabla o lista de horarios -->
                 <p style="padding: 10px; color: #777; text-align: center;">Cargando...</p>
             </div>
@@ -443,12 +423,62 @@
             <form id="formServicio">
                 <input type="hidden" id="servId">
                 <div class="form-group"><label>Nombre:</label><input type="text" id="servName" required></div>
-                <div class="form-group"><label>Duración (min):</label><input type="number" id="servDuration" required></div>
-                <div class="form-group"><label>Precio:</label><input type="number" id="servPrice" required step="0.01"></div>
+                <div class="form-group"><label>Duración (min):</label><input type="number" id="servDuration" required>
+                </div>
+                <div class="form-group"><label>Precio:</label><input type="number" id="servPrice" required step="0.01">
+                </div>
                 <div class="form-group"><label>Descripción:</label><textarea id="servDesc" rows="3"></textarea></div>
-                
+
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="cerrarModalServicio()">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="width: auto;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </div>
+
+    <!-- Modal Clientes -->
+    <div id="modalCliente" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitleCliente">Nuevo Cliente</h3>
+                <span class="close-modal" onclick="cerrarModalCliente()">&times;</span>
+            </div>
+            <form id="formCliente">
+                <input type="hidden" id="clienteId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>DNI *:</label>
+                        <input type="text" id="cliDni" class="form-control" required maxlength="8" pattern="[0-9]{7,8}">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono:</label>
+                        <input type="tel" id="cliTelefono" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre *:</label>
+                        <input type="text" id="cliNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido *:</label>
+                        <input type="text" id="cliApellido" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="cliEmail" class="form-control">
+                </div>
+                <div class="form-group" id="divCliPassword">
+                    <label>Contraseña (Por defecto es el DNI):</label>
+                    <input type="password" id="cliPassword" class="form-control" placeholder="Opcional">
+                </div>
+                <!-- Para edición, la contraseña no se muestra/edita aquí por seguridad básica, o se deja opcional para cambiar -->
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="cerrarModalCliente()">Cancelar</button>
                     <button type="submit" class="btn-primary" style="width: auto;">Guardar</button>
                 </div>
             </form>
@@ -457,6 +487,7 @@
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/main.js"></script>
     <script src="js/reportes.js"></script>
     <script src="js/turnos.js"></script>
@@ -465,4 +496,5 @@
     <script src="js/disponibilidades.js"></script>
     <script src="js/servicios.js"></script>
 </body>
+
 </html>

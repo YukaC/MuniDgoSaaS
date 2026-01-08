@@ -1,209 +1,207 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Turno - Municipalidad de Coronel Dorrego</title>
+    <title>Mi Turno - Portal del Cliente</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/cliente.css">
 </head>
-<body class="cliente-page">
-    
+
+<body class="cliente-body">
     <!-- Header -->
     <header class="cliente-header">
         <div class="container">
-            <h1>📅 Mi Turno</h1>
-            <p class="subtitle">Municipalidad de Coronel Dorrego - Reserva tu cita de forma rápida y sencilla</p>
+            <h1>🏛️ Mi Turno - Municipalidad</h1>
+            <p>Portal del Ciudadano</p>
         </div>
     </header>
 
-    <!-- Contenedor Principal -->
-    <main class="cliente-main container">
-        
-        <!-- Sección de Login/Registro -->
-        <section id="seccion-auth" class="card">
+    <main class="container">
+        <!-- Sección de Autenticación (Login/Registro) -->
+        <section id="seccion-auth">
             <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login">Iniciar Sesión</button>
-                <button class="auth-tab" data-tab="registro">Registrarse</button>
+                <button class="tab-btn active" onclick="mostrarTab('login')">Iniciar Sesión</button>
+                <button class="tab-btn" onclick="mostrarTab('registro')">Registrarse</button>
             </div>
 
-            <!-- Formulario de Login -->
-            <div id="form-login" class="auth-form active-form">
-                <h2>Iniciar Sesión</h2>
-                <p class="help-text">Ingresa con tu DNI y contraseña</p>
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label for="loginDni">DNI:</label>
-                        <input type="text" id="loginDni" class="form-control" required 
-                               placeholder="Ingresa tu DNI" maxlength="8" pattern="[0-9]{7,8}">
-                        <small class="form-text">Solo números, entre 7 y 8 dígitos</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword">Contraseña:</label>
-                        <input type="password" id="loginPassword" class="form-control" required 
-                               placeholder="Ingresa tu contraseña">
-                    </div>
-                    <button type="submit" class="btn-primary btn-large" id="btnLogin">
-                        Iniciar Sesión
-                    </button>
-                </form>
+            <!-- Tab de Login -->
+            <div id="tab-login" class="tab-content active">
+                <div class="card">
+                    <h2>Iniciar Sesión</h2>
+                    <form id="formLogin">
+                        <div class="form-group">
+                            <label for="loginDni">DNI:</label>
+                            <input type="text" id="loginDni" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Contraseña:</label>
+                            <input type="password" id="loginPassword" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn-primary btn-large">Ingresar</button>
+                    </form>
+                </div>
             </div>
 
-            <!-- Formulario de Registro -->
-            <div id="form-registro" class="auth-form" style="display: none;">
-                <h2>Crear Cuenta</h2>
-                <p class="help-text">Regístrate con tu DNI para acceder al sistema</p>
-                <form id="registroForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="regDni">DNI *:</label>
-                            <input type="text" id="regDni" class="form-control" required 
-                                   placeholder="12345678" maxlength="8" pattern="[0-9]{7,8}">
-                            <small class="form-text">Solo números, entre 7 y 8 dígitos</small>
+            <!-- Tab de Registro -->
+            <div id="tab-registro" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Crear una Cuenta</h2>
+                    <form id="formRegistro">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="regDni">DNI:</label>
+                                <input type="text" id="regDni" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="regPassword">Contraseña:</label>
+                                <input type="password" id="regPassword" class="form-control" required>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="regTelefono">Teléfono:</label>
-                            <input type="tel" id="regTelefono" class="form-control" 
-                                   placeholder="(opcional)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="regNombre">Nombre:</label>
+                                <input type="text" id="regNombre" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="regApellido">Apellido:</label>
+                                <input type="text" id="regApellido" class="form-control" required>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="regNombre">Nombre *:</label>
-                            <input type="text" id="regNombre" class="form-control" required 
-                                   placeholder="Tu nombre">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="regEmail">Email (Opcional):</label>
+                                <input type="email" id="regEmail" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="regTelefono">Teléfono (Opcional):</label>
+                                <input type="tel" id="regTelefono" class="form-control">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="regApellido">Apellido *:</label>
-                            <input type="text" id="regApellido" class="form-control" required 
-                                   placeholder="Tu apellido">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="regEmail">Email:</label>
-                        <input type="email" id="regEmail" class="form-control" 
-                               placeholder="tu@email.com (opcional)">
-                    </div>
-                    <div class="form-group">
-                        <label for="regPassword">Contraseña *:</label>
-                        <input type="password" id="regPassword" class="form-control" required 
-                               placeholder="Mínimo 6 caracteres" minlength="6">
-                        <small class="form-text">Mínimo 6 caracteres</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="regPasswordConfirm">Confirmar Contraseña *:</label>
-                        <input type="password" id="regPasswordConfirm" class="form-control" required 
-                               placeholder="Repite tu contraseña">
-                    </div>
-                    <button type="submit" class="btn-primary btn-large" id="btnRegistro">
-                        Registrarse
-                    </button>
-                </form>
+                        <button type="submit" class="btn-primary btn-large">Crear Cuenta</button>
+                    </form>
+                </div>
             </div>
         </section>
 
-        <!-- Selección de Empresa (oculto inicialmente) -->
-        <section id="seccion-empresa" style="display: none;">
-            <!-- Barra de navegación en selección de sector -->
-            <nav class="cliente-nav" style="margin-bottom: 2rem;">
-                <div class="nav-left">
-                    <h2 style="margin: 0; color: #333;">Selecciona el Sector</h2>
-                </div>
-                <div class="nav-right">
-                    <span class="cliente-info" id="clienteNombreNavSeleccion">👤 Usuario</span>
-                    <button class="btn-secondary btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
-                </div>
-            </nav>
-            
+        <!-- Barra de Navegación Global (oculta hasta el login) -->
+        <nav id="nav-global" class="cliente-nav" style="display: none; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                <button id="btn-volver" class="btn-secondary btn-sm" onclick="volverADashboard()"
+                    style="display: none;">
+                    ← Volver
+                </button>
+
+                <button class="nav-btn" onclick="verPerfilGlobal()" style="margin-left: auto; margin-right: 10px;">
+                    Mi Perfil
+                </button>
+                <button class="btn-secondary nav-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+            </div>
+            <span class="cliente-info" id="clienteNombreNavGlobal">👤 Usuario</span>
+        </nav>
+
+        <!-- Dashboard Principal (Todos los Turnos) -->
+        <section id="dashboard-principal" style="display: none;">
             <div class="card">
-                <p class="help-text">Elige el sector del municipio para el cual deseas gestionar turnos</p>
-                <div class="form-group">
-                    <label for="selectEmpresa">Sector:</label>
-                    <select id="selectEmpresa" class="form-control">
-                        <option value="">Cargando sectores...</option>
-                    </select>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>📅 Mis Turnos</h2>
+                    <button class="btn-primary" onclick="iniciarReserva()" style="width: auto;">
+                        + Reservar Nuevo Turno
+                    </button>
                 </div>
-                <button id="btnContinuar" class="btn-primary" disabled>Continuar</button>
-            </div>
-            
-            <!-- Sección de Turnos Reservados (todas las áreas) -->
-            <div id="turnos-todas-areas" class="card" style="margin-top: 2rem; display: none;">
-                <h3>📋 Mis Turnos Reservados (Todos los Sectores)</h3>
-                <div id="resultados-turnos-todas-areas" class="turnos-lista">
-                    <p class="help-text">Cargando tus turnos...</p>
-                </div>
+                <p class="help-text">Tus turnos programados en todos los sectores del municipio se mostrarán debajo</p>
+
+                <div id="resultados-turnos-todas-areas"></div>
             </div>
         </section>
 
-        <!-- Panel Principal (oculto inicialmente) -->
-        <div id="panel-principal" style="display: none;">
-            
-            <!-- Navegación -->
-            <nav class="cliente-nav">
-                <div class="nav-left">
-                    <button class="nav-btn active" data-section="reservar">Reservar Turno</button>
-                    <button class="nav-btn" data-section="mis-turnos">Mis Turnos</button>
-                </div>
-                <div class="nav-right">
-                    <button class="btn-secondary btn-sm" onclick="volverASeleccionarArea()" style="margin-right: 10px;">← Cambiar Sector</button>
-                    <span class="cliente-info" id="clienteNombreNav">👤 Usuario</span>
-                    <button class="btn-secondary btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
-                </div>
-            </nav>
+        <!-- Panel de Reserva de Turno -->
+        <section id="panel-reserva" class="card" style="display: none;">
+            <h2>📅 Reservar Nuevo Turno</h2>
 
-            <!-- Sección: Reservar Turno -->
-            <section id="seccion-reservar" class="card active-section">
-                <h2>📅 Reservar Nuevo Turno</h2>
-                
-                <form id="formReservar">
+            <div class="form-group">
+                <label>Selecciona el Sector:</label>
+                <select id="selectEmpresaReserva" class="form-control" onchange="cambiarEmpresaReserva()">
+                    <option value="">Cargando sectores...</option>
+                </select>
+            </div>
 
+            <form id="formReservar">
+                <div class="form-group">
+                    <label for="selectProfesional">Profesional / Especialidad:</label>
+                    <select id="selectProfesional" class="form-control" required onchange="actualizarInfoProfesional()">
+                        <option value="">Primero selecciona un sector...</option>
+                    </select>
+                    <small class="form-text" id="infoEspecialidad" style="display: none;"></small>
+                    <small class="form-text" id="infoDiasDisponibles" style="display: none;"></small>
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="selectProfesional">Profesional / Especialidad:</label>
-                        <select id="selectProfesional" class="form-control" required onchange="actualizarInfoProfesional()">
-                            <option value="">Selecciona un profesional...</option>
+                        <label for="fechaTurno">Fecha:</label>
+                        <input type="date" id="fechaTurno" class="form-control" required
+                            onchange="cargarHorariosDisponibles()">
+                    </div>
+                    <div class="form-group">
+                        <label for="horaTurno">Hora:</label>
+                        <select id="horaTurno" class="form-control" required disabled>
+                            <option value="">Primero selecciona fecha y profesional</option>
                         </select>
-                        <small class="form-text" id="infoEspecialidad" style="display: none;"></small>
-                        <small class="form-text" id="infoDiasDisponibles" style="display: none;"></small>
                     </div>
+                </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="fechaTurno">Fecha:</label>
-                            <input type="date" id="fechaTurno" class="form-control" required 
-                                   min="" onchange="cargarHorariosDisponibles()">
-                        </div>
-                        <div class="form-group">
-                            <label for="horaTurno">Hora:</label>
-                            <select id="horaTurno" class="form-control" required disabled>
-                                <option value="">Primero selecciona fecha y profesional</option>
-                            </select>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label for="observacionesTurno">Observaciones (Opcional):</label>
+                    <textarea id="observacionesTurno" class="form-control" rows="3"
+                        placeholder="Agregar cualquier consideración o información adicional..."></textarea>
+                </div>
 
-                    <div class="form-group">
-                        <label for="observacionesTurno">Observaciones (Opcional):</label>
-                        <textarea id="observacionesTurno" class="form-control" rows="3" 
-                                  placeholder="Agregar cualquier consideración o información adicional sobre tu consulta..."></textarea>
-                        <small class="form-text">Puedes agregar información relevante para el profesional</small>
-                    </div>
-
-                    <button type="submit" class="btn-primary btn-large" id="btnReservar">
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" class="btn-secondary" onclick="cancelarReserva()">Cancelar</button>
+                    <button type="submit" class="btn-primary btn-large" id="btnReservar" style="flex: 1;">
                         Confirmar Reserva
                     </button>
-                </form>
-            </section>
-
-            <!-- Sección: Mis Turnos -->
-            <section id="seccion-mis-turnos" class="card active-section" style="display: none;">
-                <h2>📋 Mis Turnos Reservados</h2>
-                <p class="help-text">Aquí puedes ver todos tus turnos reservados</p>
-
-                <div id="resultados-turnos" class="turnos-lista">
-                    <p class="help-text">Cargando tus turnos...</p>
                 </div>
-            </section>
+            </form>
+        </section>
 
-        </div>
+        <!-- Sección: Mi Perfil -->
+        <section id="seccion-perfil" class="card" style="display: none;">
+            <h2>👤 Mi Perfil</h2>
+            <form id="formPerfil">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre:</label>
+                        <input type="text" id="perfilNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido:</label>
+                        <input type="text" id="perfilApellido" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="perfilEmail" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono:</label>
+                        <input type="number" id="perfilTelefono" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                        <input type="password" id="perfilPassword" class="form-control" placeholder="******">
+                    </div>
+                    <div class="form-group">
+                        <label>DNI:</label>
+                        <input type="number" id="perfilDni" class="form-control" required readonly>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-large">Guardar Cambios</button>
+            </form>
+        </section>
     </main>
 
     <!-- Modal de Confirmación -->
@@ -225,21 +223,17 @@
     <!-- Footer -->
     <footer class="cliente-footer">
         <div class="container">
-            <p>&copy; 2024 Mi Turno - Municipalidad de Coronel Dorrego. Todos los derechos reservados.</p>
+            <p>&copy;
+                <script>document.write(new Date().getFullYear())</script> Mi Turno - Municipalidad de Coronel Dorrego.
+                Todos los derechos reservados.
+            </p>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/cliente-publico.js"></script>
-    <script>
-        // Función global para cerrar sesión
-        function cerrarSesion() {
-            localStorage.removeItem('clienteToken');
-            localStorage.removeItem('clienteData');
-            window.location.reload();
-        }
-    </script>
 </body>
-</html>
 
+</html>

@@ -25,6 +25,53 @@ def obtener_disponibilidades_por_empresa(id_empresa):
         return jsonify({"message": str(e)}), 500
 
 
+# ---------------------- OBTENER RESUMEN DISPONIBILIDADES (BULK) ----------------------
+@app.route('/empresa/<int:id_empresa>/profesionales/disponibilidades-resumen', methods=['GET'])
+@requiere_token
+def obtener_resumen_disponibilidades_empresa(id_empresa):
+    """
+    Devuelve un resumen de los días disponibles para TODOS los profesionales de la empresa.
+    Formato: { profesional_id: ["Lunes", "Miércoles"], ... }
+    Optimiza la carga en el frontend evitando N requests.
+    """
+    from api.utils.db_helpers import get_db_cursor, DIAS_SEMANA
+    from api.cache.cache_manager import cache_manager
+    from api.cache.cache_keys import CacheKeys
+    
+    # Intentar obtener del cache
+    cache_key = CacheKeys.disponibilidades_resumen(id_empresa)
+    cached_result = cache_manager.get(cache_key)
+    if cached_result is not None:
+        return jsonify(cached_result), 200
+    
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                """SELECT d.profesional_id, d.day_of_week 
+                   FROM disponibilidades d
+                   JOIN profesionales p ON d.profesional_id = p.id
+                   WHERE p.empresa_id = %s
+                   ORDER BY d.profesional_id, d.day_of_week""",
+                (id_empresa,)
+            )
+            filas = cursor.fetchall()
+        
+        resumen = {}
+        for pid, dia_num in filas:
+            if pid not in resumen:
+                resumen[pid] = []
+            nombre_dia = DIAS_SEMANA.get(dia_num, "")
+            if nombre_dia not in resumen[pid]:
+                resumen[pid].append(nombre_dia)
+        
+        # Guardar en cache (2 minutos)
+        cache_manager.set(cache_key, resumen, CacheKeys.TTL_MEDIUM)
+                
+        return jsonify(resumen), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
 # ---------------------- OBTENER POR PROFESIONAL ----------------------
 @app.route('/empresa/<int:id_empresa>/profesional/<int:id>/disponibilidades', methods=['GET'])
 @requiere_token

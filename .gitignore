@@ -1,21 +1,89 @@
-# Ignorar carpetas de entorno virtual
-.venv/
-venv/
-env/
-
-# Ignorar cache de Python
+# ==================== PYTHON ====================
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Archivos de configuración de entornos
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# ==================== ENVIRONMENT & CONFIG ====================
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Mantener .env.example
+!.env.example
 
-# Archivos de logs
-*.log
+# ==================== DATABASE ====================
+*.sqlite3
+*.db
+# Ignorar backups automáticos pero mantener scripts de estructura
+*.sql
+!database/01_INSTALL.sql
+!database/02_SEED_MUNI.sql
+!database/03_LIMPIEZA.sql
+!database/indicesOptimizacion.sql
+# Ignorar dumps y backups comprimidos
+*.sql.gz
+*.dump
+backups/
 
-# Archivos temporales de IDEs
+# ==================== IDE & EDITORS ====================
 .vscode/
-
-# Archivos de sistema
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+.idea/
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==================== LOGS ====================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# ==================== TESTING ====================
+.coverage
+htmlcov/
+.pytest_cache/
+workers/
+
+# ==================== NODE / FRONTEND ====================
+node_modules/
+dist/
+.cache/
+.parcel-cache/
+
+# ==================== AGENT / TEMP ====================
+.gemini/
+.agent/
+tmp/

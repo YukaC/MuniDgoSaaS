@@ -1,4 +1,8 @@
-from api.db.db_config import get_db_connection
+"""
+Modelo Disponibilidad - Refactorizado con Connection Pooling
+"""
+from api.utils.db_helpers import get_db_cursor
+
 
 class Disponibilidad:
 
@@ -45,31 +49,20 @@ class Disponibilidad:
 
     @classmethod
     def get_disponibilidad_by_id(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
-        fila = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
+            fila = cursor.fetchone()
         return Disponibilidad(fila).to_json() if fila else None
 
     @classmethod
     def get_disponibilidades(cls):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM disponibilidades")
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM disponibilidades")
+            filas = cursor.fetchall()
         return [Disponibilidad(fila).to_json() for fila in filas] if filas else []
     
     @classmethod
     def get_disponibilidades_by_idempresa(cls, empresa_id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        # Seleccionamos explícitamente las columnas para asegurar el orden correcto para __init__ (0-6)
-        # y agregamos las columnas extra de la tabla profesionales (7-8)
         query = """
             SELECT 
                 d.id, 
@@ -87,75 +80,57 @@ class Disponibilidad:
             ORDER BY d.day_of_week ASC, d.start_time ASC
         """
         
-        cursor.execute(query, (empresa_id,))
-        filas = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute(query, (empresa_id,))
+            filas = cursor.fetchall()
 
         resultados = []
-        if filas:
-            for fila in filas:
-                # Creamos el objeto base con las primeras 7 columnas
-                disp_base = Disponibilidad(fila).to_json()
-                
-                # Inyectamos los datos extra del profesional
-                disp_base["profesional_nombre"] = fila[7]
-                disp_base["profesional_apellido"] = fila[8]
-                
-                resultados.append(disp_base)
+        for fila in filas:
+            disp_base = Disponibilidad(fila).to_json()
+            disp_base["profesional_nombre"] = fila[7]
+            disp_base["profesional_apellido"] = fila[8]
+            resultados.append(disp_base)
                 
         return resultados
 
     @classmethod
     def get_disponibilidades_by_idprofesional(cls, profesional_id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM disponibilidades WHERE profesional_id = %s", (profesional_id,))
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM disponibilidades WHERE profesional_id = %s", (profesional_id,))
+            filas = cursor.fetchall()
         return [Disponibilidad(fila).to_json() for fila in filas] if filas else []
-    
 
     @classmethod
     def create_disponibilidad(cls, datos):
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        # --- VALIDACIÓN DE SUPERPOSICIÓN ---
-        cursor.execute(
-            """SELECT id FROM disponibilidades 
-               WHERE profesional_id = %s 
-               AND day_of_week = %s 
-               AND start_time < %s 
-               AND end_time > %s""",
-            (datos["profesional_id"], datos["day_of_week"], datos["end_time"], datos["start_time"])
-        )
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El profesional ya tiene disponibilidad asignada en ese horario")
-        
-        # --- INSERT ACTUALIZADO ---
-        # Incluye empresa_id y created_at (NOW())
-        cursor.execute(
-            """INSERT INTO disponibilidades 
-               (profesional_id, empresa_id, day_of_week, start_time, end_time, created_at) 
-               VALUES (%s, %s, %s, %s, %s, NOW())""",
-            (datos["profesional_id"], datos["empresa_id"], datos["day_of_week"], 
-             datos["start_time"], datos["end_time"])
-        )
-        connection.commit()
-        nuevo_id = cursor.lastrowid
-        
-        cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (nuevo_id,))
-        nuevo = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            # --- VALIDACIÓN DE SUPERPOSICIÓN ---
+            cursor.execute(
+                """SELECT id FROM disponibilidades 
+                   WHERE profesional_id = %s 
+                   AND day_of_week = %s 
+                   AND start_time < %s 
+                   AND end_time > %s""",
+                (datos["profesional_id"], datos["day_of_week"], datos["end_time"], datos["start_time"])
+            )
+            if cursor.fetchone():
+                raise ValueError("El profesional ya tiene disponibilidad asignada en ese horario")
+            
+            # --- INSERCIÓN ---
+            cursor.execute(
+                """INSERT INTO disponibilidades 
+                   (profesional_id, empresa_id, day_of_week, start_time, end_time, created_at) 
+                   VALUES (%s, %s, %s, %s, %s, NOW())""",
+                (datos["profesional_id"], datos["empresa_id"], datos["day_of_week"], 
+                 datos["start_time"], datos["end_time"])
+            )
+            nuevo_id = cursor.lastrowid
+            
+            cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (nuevo_id,))
+            nuevo = cursor.fetchone()
+            
         return Disponibilidad(nuevo).to_json()
 
     @classmethod
@@ -163,58 +138,46 @@ class Disponibilidad:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT id FROM disponibilidades WHERE id = %s", (id,))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe la disponibilidad")
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM disponibilidades WHERE id = %s", (id,))
+            if not cursor.fetchone():
+                raise ValueError("No existe la disponibilidad")
 
-        # --- VALIDACIÓN DE SUPERPOSICIÓN (UPDATE) ---
-        cursor.execute(
-            """SELECT id FROM disponibilidades 
-               WHERE profesional_id = %s 
-               AND day_of_week = %s 
-               AND start_time < %s 
-               AND end_time > %s
-               AND id != %s""",
-            (datos["profesional_id"], datos["day_of_week"], datos["end_time"], datos["start_time"], id)
-        )
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("El profesional ya tiene disponibilidad asignada en ese horario")
-        
-        # --- UPDATE ACTUALIZADO ---
-        # Incluye empresa_id, pero NO toca created_at
-        cursor.execute(
-            """UPDATE disponibilidades SET 
-               profesional_id=%s, empresa_id=%s, day_of_week=%s, start_time=%s, end_time=%s 
-               WHERE id=%s""",
-            (datos["profesional_id"], datos["empresa_id"], datos["day_of_week"], 
-             datos["start_time"], datos["end_time"], id)
-        )
-        connection.commit()
-        
-        cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
-        actualizado = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            # --- VALIDACIÓN DE SUPERPOSICIÓN (UPDATE) ---
+            cursor.execute(
+                """SELECT id FROM disponibilidades 
+                   WHERE profesional_id = %s 
+                   AND day_of_week = %s 
+                   AND start_time < %s 
+                   AND end_time > %s
+                   AND id != %s""",
+                (datos["profesional_id"], datos["day_of_week"], datos["end_time"], datos["start_time"], id)
+            )
+            if cursor.fetchone():
+                raise ValueError("El profesional ya tiene disponibilidad asignada en ese horario")
+            
+            # --- ACTUALIZACIÓN ---
+            cursor.execute(
+                """UPDATE disponibilidades SET 
+                   profesional_id=%s, empresa_id=%s, day_of_week=%s, start_time=%s, end_time=%s 
+                   WHERE id=%s""",
+                (datos["profesional_id"], datos["empresa_id"], datos["day_of_week"], 
+                 datos["start_time"], datos["end_time"], id)
+            )
+            
+            cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
+            actualizado = cursor.fetchone()
+            
         return Disponibilidad(actualizado).to_json()
 
     @classmethod
     def delete_disponibilidad(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
-        eliminado = cursor.fetchone()
-        if not eliminado:
-            raise ValueError("No existe la disponibilidad")
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM disponibilidades WHERE id = %s", (id,))
+            eliminado = cursor.fetchone()
+            if not eliminado:
+                raise ValueError("No existe la disponibilidad")
 
-        cursor.execute("DELETE FROM disponibilidades WHERE id = %s", (id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
+            cursor.execute("DELETE FROM disponibilidades WHERE id = %s", (id,))
+            
         return Disponibilidad(eliminado).to_json()

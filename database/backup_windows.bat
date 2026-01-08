@@ -7,7 +7,7 @@ REM ============================================================
 REM Configuración
 set DB_USER=root
 set DB_PASSWORD=TU_PASSWORD_AQUI
-set DB_NAME=ProyectoTurnos
+set DB_NAME=turnos_dorrego
 set BACKUP_DIR=C:\backups\mi_turno
 
 REM Crear directorio de backup si no existe

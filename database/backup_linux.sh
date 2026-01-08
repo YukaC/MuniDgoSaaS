@@ -7,7 +7,7 @@
 # Configuración
 DB_USER="root"
 DB_PASSWORD="TU_PASSWORD_AQUI"
-DB_NAME="ProyectoTurnos"
+DB_NAME="turnos_dorrego"
 BACKUP_DIR="/var/backups/mi_turno"
 
 # Crear directorio de backup si no existe

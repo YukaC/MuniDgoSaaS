@@ -1,9 +1,20 @@
+"""
+Rutas de API para Turnos - Refactorizado con DRY y Cache
+"""
 from flask import request, jsonify
+from datetime import datetime, timedelta
+
+from api import app
 from api.models.Turnos import Turno
 from api.utils.seguridad import requiere_token, misma_empresa, validar_referencias
-from api import app
-from api.db.db_config import get_db_connection
-from datetime import datetime, timedelta
+from api.utils.db_helpers import (
+    get_db_cursor, validate_profesional_empresa, validate_servicio_empresa,
+    python_weekday_to_db
+)
+from api.utils.formatters import format_horario_slot
+from api.cache.cache_manager import cache_manager
+from api.cache.cache_keys import CacheKeys
+
 
 # ---------------------- OBTENER TODOS ----------------------
 @app.route('/turnos', methods=['GET'])
@@ -14,7 +25,7 @@ def obtener_turnos():
         return jsonify(turnos), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500
-    
+
 
 # ---------------------- OBTENER POR EMPRESA ----------------------
 @app.route('/empresa/<int:id_empresa>/turnos', methods=['GET'])
@@ -31,7 +42,7 @@ def obtener_turnos_por_empresa(id_empresa):
 @app.route('/empresa/<int:id_empresa>/turno/<int:id>', methods=['GET'])
 @requiere_token
 @misma_empresa(tabla='turnos')
-def obtener_turno(id,id_empresa):
+def obtener_turno(id, id_empresa):
     try:
         turno = Turno.get_turno_by_id(id)
         if turno is None:
@@ -44,21 +55,27 @@ def obtener_turno(id,id_empresa):
 # ---------------------- CREAR ----------------------
 @app.route('/turno', methods=['POST'])
 @requiere_token
-@validar_referencias({
-    'profesional_id': 'profesionales',
-    # servicio_id es opcional ahora, solo validar si se proporciona
-})
+@validar_referencias({'profesional_id': 'profesionales'})
 def crear_turno():
     datos = request.get_json()
-
     datos['empresa_id'] = int(request.headers['id-empresa'])
 
     try:
-        # El modelo valida datos, existencia de servicio y superposición de horarios
         nuevo = Turno.create_turno(datos)
+        
+        # Invalidar cache de horarios
+        if datos.get('profesional_id') and datos.get('start_datetime'):
+            fecha = datos['start_datetime'][:10]
+            cache_manager.invalidate(
+                CacheKeys.invalidar_turno(
+                    datos['empresa_id'], 
+                    datos['profesional_id'], 
+                    fecha
+                )
+            )
+        
         return jsonify(nuevo), 201
     except ValueError as e:
-        # Captura errores de validación (servicio no existe, horario ocupado, datos inválidos)
         return jsonify({"message": str(e)}), 400
     except Exception as e:
         return jsonify({"message": str(e)}), 500
@@ -68,34 +85,28 @@ def crear_turno():
 @app.route('/empresa/<int:id_empresa>/turno/<int:id>', methods=['PUT'])
 @requiere_token
 @misma_empresa(tabla='turnos')
-@validar_referencias({
-    'profesional_id': 'profesionales',
-    # servicio_id es opcional ahora
-})
-def actualizar_turno(id,id_empresa):
+@validar_referencias({'profesional_id': 'profesionales'})
+def actualizar_turno(id, id_empresa):
     datos = request.get_json()
-
     datos['empresa_id'] = int(id_empresa)
     
     # Validar servicio_id solo si se proporciona
     if datos.get('servicio_id'):
-        from api.db.db_config import get_db_connection
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT id FROM servicios WHERE id = %s AND empresa_id = %s", 
-                      (datos['servicio_id'], id_empresa))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
+        if not validate_servicio_empresa(datos['servicio_id'], id_empresa):
             return jsonify({"message": "Servicio no encontrado o no pertenece a la empresa"}), 400
-        cursor.close()
-        connection.close()
 
     try:
         actualizado = Turno.update_turno(id, datos)
+        
+        # Invalidar cache
+        if datos.get('profesional_id') and datos.get('start_datetime'):
+            fecha = datos['start_datetime'][:10]
+            cache_manager.invalidate(
+                CacheKeys.invalidar_turno(id_empresa, datos['profesional_id'], fecha)
+            )
+        
         return jsonify(actualizado), 200
     except ValueError as e:
-        # Captura si el turno no existe o conflictos de horario al editar
         return jsonify({"message": str(e)}), 400
     except Exception as e:
         return jsonify({"message": str(e)}), 500
@@ -105,12 +116,22 @@ def actualizar_turno(id,id_empresa):
 @app.route('/empresa/<int:id_empresa>/turno/<int:id>', methods=['DELETE'])
 @requiere_token
 @misma_empresa(tabla='turnos')
-def eliminar_turno(id,id_empresa):
+def eliminar_turno(id, id_empresa):
     try:
+        # Obtener datos del turno antes de eliminar para invalidar cache
+        turno = Turno.get_turno_by_id(id)
+        
         eliminado = Turno.delete_turno(id)
+        
+        # Invalidar cache si teníamos datos
+        if turno and turno.get('profesional_id') and turno.get('start_datetime'):
+            fecha = turno['start_datetime'][:10]
+            cache_manager.invalidate(
+                CacheKeys.invalidar_turno(id_empresa, turno['profesional_id'], fecha)
+            )
+        
         return jsonify(eliminado), 200
     except ValueError as e:
-        # El modelo lanza ValueError si no encuentra el ID para borrar
         return jsonify({"message": str(e)}), 404
     except Exception as e:
         return jsonify({"message": str(e)}), 500
@@ -121,44 +142,33 @@ def eliminar_turno(id,id_empresa):
 @requiere_token
 def actualizar_estados_turnos():
     """
-    Endpoint para actualizar automáticamente los estados de turnos que ya pasaron su fecha.
-    Se puede llamar periódicamente mediante un cron job o tarea programada.
+    Actualiza automáticamente los estados de turnos que ya pasaron su fecha.
+    Usar con cron job o tarea programada.
     """
     try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        # Actualizar turnos que ya pasaron su fecha y hora
-        # Solo actualizar turnos que estén en estado "Reservado"
-        cursor.execute(
-            """UPDATE turnos
-               SET status = 'Pendiente de Confirmación'
-               WHERE status = 'Reservado'
-               AND start_datetime < NOW()
-               AND DATE_ADD(start_datetime, INTERVAL 1 DAY) > NOW()"""
-        )
-        turnos_actualizados_recientes = cursor.rowcount
-        
-        # Actualizar turnos de más de 1 día atrás que aún estén en "Reservado"
-        cursor.execute(
-            """UPDATE turnos
-               SET status = 'Pendiente de Confirmación'
-               WHERE status = 'Reservado'
-               AND start_datetime < DATE_SUB(NOW(), INTERVAL 1 DAY)"""
-        )
-        turnos_actualizados_antiguos = cursor.rowcount
-        
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        total_actualizados = turnos_actualizados_recientes + turnos_actualizados_antiguos
+        with get_db_cursor() as cursor:
+            # Turnos recientes (menos de 1 día)
+            cursor.execute("""
+                UPDATE turnos SET status = 'Pendiente de Confirmación'
+                WHERE status = 'Reservado'
+                AND start_datetime < NOW()
+                AND DATE_ADD(start_datetime, INTERVAL 1 DAY) > NOW()
+            """)
+            recientes = cursor.rowcount
+            
+            # Turnos antiguos (más de 1 día)
+            cursor.execute("""
+                UPDATE turnos SET status = 'Pendiente de Confirmación'
+                WHERE status = 'Reservado'
+                AND start_datetime < DATE_SUB(NOW(), INTERVAL 1 DAY)
+            """)
+            antiguos = cursor.rowcount
         
         return jsonify({
-            "message": f"Estados actualizados exitosamente",
-            "turnos_actualizados": total_actualizados,
-            "recientes": turnos_actualizados_recientes,
-            "antiguos": turnos_actualizados_antiguos
+            "message": "Estados actualizados exitosamente",
+            "turnos_actualizados": recientes + antiguos,
+            "recientes": recientes,
+            "antiguos": antiguos
         }), 200
         
     except Exception as e:
@@ -170,157 +180,163 @@ def actualizar_estados_turnos():
 @requiere_token
 def obtener_horarios_disponibles_admin(id_empresa):
     """
-    Endpoint para el panel administrativo que devuelve los horarios disponibles.
-    Recibe parámetros: profesional_id, fecha (YYYY-MM-DD), servicio_id (opcional)
+    Devuelve los horarios disponibles para un profesional en una fecha.
+    Parámetros: profesional_id, fecha (YYYY-MM-DD), servicio_id (opcional)
     """
     try:
         profesional_id = request.args.get('profesional_id', type=int)
-        fecha = request.args.get('fecha')  # Formato: YYYY-MM-DD
+        fecha = request.args.get('fecha')
         servicio_id = request.args.get('servicio_id', type=int)
         
         if not profesional_id or not fecha:
             return jsonify({"message": "Se requiere profesional_id y fecha"}), 400
         
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        # Validar que el profesional pertenezca a la empresa
-        cursor.execute("SELECT id FROM profesionales WHERE id = %s AND empresa_id = %s", (profesional_id, id_empresa))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
+        # Validar profesional
+        profesional = validate_profesional_empresa(profesional_id, id_empresa)
+        if not profesional:
             return jsonify({"message": "Profesional no encontrado"}), 404
         
-        # Obtener duración del servicio si se proporciona, sino usar duración por defecto según especialidad
-        duracion_servicio = 30  # Por defecto
-        if servicio_id:
-            cursor.execute("SELECT duration_minutes FROM servicios WHERE id = %s AND empresa_id = %s", 
-                          (servicio_id, id_empresa))
-            servicio = cursor.fetchone()
-            if servicio:
-                duracion_servicio = servicio[0]
-        else:
-            # Obtener especialidad del profesional para duración por defecto
-            cursor.execute("SELECT especialidad FROM profesionales WHERE id = %s AND empresa_id = %s", 
-                          (profesional_id, id_empresa))
-            prof = cursor.fetchone()
-            if prof:
-                especialidad = prof[0] or "Consulta General"
-                if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
-                    duracion_servicio = 45
-                elif "Cirugía" in especialidad:
-                    duracion_servicio = 60
-                else:
-                    duracion_servicio = 30
+        # Intentar obtener del cache
+        cache_key = CacheKeys.horarios_disponibles(id_empresa, profesional_id, fecha, servicio_id)
+        cached_result = cache_manager.get(cache_key)
+        if cached_result is not None:
+            return jsonify({"horarios_disponibles": cached_result}), 200
         
-        # Obtener disponibilidades del profesional para el día de la semana
-        fecha_obj = datetime.strptime(fecha, '%Y-%m-%d')
-        dia_semana = fecha_obj.weekday()  # 0=Lunes, 6=Domingo (Python)
-        # Convertir a formato de BD: 0=Domingo, 1=Lunes, ..., 6=Sábado
-        if dia_semana == 6:  # Domingo en Python
-            dia_bd = 0  # Domingo en BD
-        else:
-            dia_bd = dia_semana + 1  # Lunes=1, Martes=2, ..., Sábado=6
+        # Obtener duración del servicio
+        duracion_servicio = _get_duracion_servicio(servicio_id, id_empresa, profesional['especialidad'])
         
-        cursor.execute(
-            """SELECT start_time, end_time FROM disponibilidades 
-               WHERE profesional_id = %s AND day_of_week = %s""",
-            (profesional_id, dia_bd)
-        )
-        disponibilidades = cursor.fetchall()
+        # Calcular horarios disponibles
+        horarios = _calcular_horarios_disponibles(profesional_id, fecha, duracion_servicio)
         
-        if not disponibilidades:
-            cursor.close()
-            connection.close()
-            return jsonify({"horarios_disponibles": []}), 200
+        # Guardar en cache (30 segundos - cambia con cada reserva)
+        cache_manager.set(cache_key, horarios, CacheKeys.TTL_SHORT)
         
-        # Obtener turnos ya reservados para ese día
-        cursor.execute(
-            """SELECT start_datetime, 
-               DATE_ADD(start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) as end_datetime
-               FROM turnos t
-               LEFT JOIN servicios s ON t.servicio_id = s.id
-               WHERE t.profesional_id = %s 
-               AND DATE(t.start_datetime) = %s
-               AND t.status != 'Cancelado'""",
-            (profesional_id, fecha)
-        )
-        turnos_ocupados = cursor.fetchall()
-        
-        cursor.close()
-        connection.close()
-        
-        # Generar horarios disponibles
-        horarios_disponibles = []
-        hora_inicio_base = datetime.strptime(fecha, '%Y-%m-%d')
-        ahora = datetime.now()
-        
-        for disp in disponibilidades:
-            # Manejar diferentes formatos de tiempo
-            inicio_str = str(disp[0])
-            fin_str = str(disp[1])
-            
-            # Si viene como datetime, extraer solo la parte de tiempo
-            if ' ' in inicio_str:
-                inicio_str = inicio_str.split(' ')[1]
-            if ' ' in fin_str:
-                fin_str = fin_str.split(' ')[1]
-            
-            # Parsear el tiempo
-            try:
-                if len(inicio_str.split(':')) == 3:
-                    inicio_disp = datetime.strptime(inicio_str, '%H:%M:%S').time()
-                else:
-                    inicio_disp = datetime.strptime(inicio_str, '%H:%M').time()
-            except:
-                inicio_disp = datetime.strptime(inicio_str[:5], '%H:%M').time()
-            
-            try:
-                if len(fin_str.split(':')) == 3:
-                    fin_disp = datetime.strptime(fin_str, '%H:%M:%S').time()
-                else:
-                    fin_disp = datetime.strptime(fin_str, '%H:%M').time()
-            except:
-                fin_disp = datetime.strptime(fin_str[:5], '%H:%M').time()
-            
-            # Generar slots cada 10 minutos dentro del rango de disponibilidad
-            hora_actual = datetime.combine(hora_inicio_base.date(), inicio_disp)
-            fin_disponibilidad = datetime.combine(hora_inicio_base.date(), fin_disp)
-            
-            while hora_actual + timedelta(minutes=duracion_servicio) <= fin_disponibilidad:
-                # Verificar si este slot está ocupado
-                fin_slot = hora_actual + timedelta(minutes=duracion_servicio)
-                ocupado = False
-                
-                for turno_ocupado in turnos_ocupados:
-                    inicio_ocupado = turno_ocupado[0]
-                    fin_ocupado = turno_ocupado[1]
-                    
-                    # Convertir a datetime si no lo son ya
-                    if isinstance(inicio_ocupado, str):
-                        inicio_ocupado = datetime.strptime(inicio_ocupado, '%Y-%m-%d %H:%M:%S')
-                    if isinstance(fin_ocupado, str):
-                        fin_ocupado = datetime.strptime(fin_ocupado, '%Y-%m-%d %H:%M:%S')
-                    
-                    # Verificar superposición
-                    if (hora_actual < fin_ocupado and fin_slot > inicio_ocupado):
-                        ocupado = True
-                        break
-                
-                if not ocupado:
-                    # Solo agregar horarios que no sean en el pasado
-                    if hora_actual > ahora:
-                        horarios_disponibles.append({
-                            "hora": hora_actual.strftime('%H:%M'),
-                            "datetime": hora_actual.strftime('%Y-%m-%d %H:%M:%S')
-                        })
-                
-                # Avanzar 10 minutos
-                hora_actual += timedelta(minutes=10)
-        
-        return jsonify({"horarios_disponibles": horarios_disponibles}), 200
+        return jsonify({"horarios_disponibles": horarios}), 200
         
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
     except Exception as e:
         return jsonify({"message": str(e)}), 500
+
+
+# ---------------------- RESUMEN DE DISPONIBILIDADES (ADMIN) ----------------------
+@app.route('/empresa/<int:id_empresa>/profesionales/disponibilidades-resumen', methods=['GET'])
+@requiere_token
+def obtener_resumen_disponibilidades_admin(id_empresa):
+    """Devuelve resumen de días disponibles para todos los profesionales"""
+    
+    # Intentar obtener del cache
+    cache_key = CacheKeys.disponibilidades_resumen(id_empresa)
+    cached_result = cache_manager.get(cache_key)
+    if cached_result is not None:
+        return jsonify(cached_result), 200
+    
+    try:
+        from api.utils.formatters import format_disponibilidad_resumen
+        
+        with get_db_cursor() as cursor:
+            cursor.execute("""
+                SELECT d.profesional_id, d.day_of_week 
+                FROM disponibilidades d
+                JOIN profesionales p ON d.profesional_id = p.id
+                WHERE p.empresa_id = %s
+                ORDER BY d.profesional_id, d.day_of_week
+            """, (id_empresa,))
+            filas = cursor.fetchall()
+        
+        resultado = format_disponibilidad_resumen(filas)
+        
+        # Guardar en cache (2 minutos)
+        cache_manager.set(cache_key, resultado, CacheKeys.TTL_MEDIUM)
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
+# ==================== FUNCIONES HELPER PRIVADAS ====================
+
+def _get_duracion_servicio(servicio_id, empresa_id, especialidad=None):
+    """Obtiene la duración del servicio o calcula por defecto"""
+    if servicio_id:
+        servicio = validate_servicio_empresa(servicio_id, empresa_id)
+        if servicio:
+            return servicio['duration_minutes']
+    
+    # Duración por defecto según especialidad
+    if especialidad:
+        if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
+            return 45
+        elif "Cirugía" in especialidad:
+            return 60
+    
+    return 30
+
+
+def _calcular_horarios_disponibles(profesional_id, fecha, duracion_servicio):
+    """Calcula los horarios disponibles para un profesional en una fecha"""
+    fecha_obj = datetime.strptime(fecha, '%Y-%m-%d')
+    dia_bd = python_weekday_to_db(fecha_obj.weekday())
+    ahora = datetime.now()
+    
+    with get_db_cursor() as cursor:
+        # Obtener disponibilidades del profesional
+        cursor.execute(
+            "SELECT start_time, end_time FROM disponibilidades WHERE profesional_id = %s AND day_of_week = %s",
+            (profesional_id, dia_bd)
+        )
+        disponibilidades = cursor.fetchall()
+        
+        if not disponibilidades:
+            return []
+        
+        # Obtener turnos ocupados
+        cursor.execute("""
+            SELECT start_datetime, 
+                   DATE_ADD(start_datetime, INTERVAL COALESCE(s.duration_minutes, 30) MINUTE) as end_datetime
+            FROM turnos t
+            LEFT JOIN servicios s ON t.servicio_id = s.id
+            WHERE t.profesional_id = %s AND DATE(t.start_datetime) = %s AND t.status != 'Cancelado'
+        """, (profesional_id, fecha))
+        turnos_ocupados = cursor.fetchall()
+    
+    horarios_disponibles = []
+    hora_inicio_base = datetime.strptime(fecha, '%Y-%m-%d')
+    
+    for disp in disponibilidades:
+        inicio_disp = _parse_time(str(disp[0]))
+        fin_disp = _parse_time(str(disp[1]))
+        
+        hora_actual = datetime.combine(hora_inicio_base.date(), inicio_disp)
+        fin_disponibilidad = datetime.combine(hora_inicio_base.date(), fin_disp)
+        
+        while hora_actual + timedelta(minutes=duracion_servicio) <= fin_disponibilidad:
+            fin_slot = hora_actual + timedelta(minutes=duracion_servicio)
+            
+            # Verificar si está ocupado
+            ocupado = any(
+                hora_actual < turno[1] and fin_slot > turno[0]
+                for turno in turnos_ocupados
+            )
+            
+            if not ocupado:
+                horarios_disponibles.append(format_horario_slot(hora_actual))
+            
+            hora_actual += timedelta(minutes=10)
+    
+    return horarios_disponibles
+
+
+def _parse_time(time_str):
+    """Parsea un string de tiempo a objeto time"""
+    if ' ' in time_str:
+        time_str = time_str.split(' ')[1]
+    
+    time_str = time_str.strip()
+    
+    try:
+        if len(time_str.split(':')) == 3:
+            return datetime.strptime(time_str, '%H:%M:%S').time()
+        return datetime.strptime(time_str, '%H:%M').time()
+    except:
+        return datetime.strptime(time_str[:5], '%H:%M').time()

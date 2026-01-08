@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (response.ok) {
           const sessionData = {
             id: data.id,
-            nombre: data.nombre, // Este es el nombre de la empresa
+            nombre: data.nombre, // Nombre de la empresa (actualizado el backend para devolverlo)
             token: data.token,
           };
           localStorage.setItem("activeUser", JSON.stringify(sessionData));

@@ -191,6 +191,12 @@ function configurarNavegacion() {
       } else {
         console.log("Navegación sin target definido");
       }
+
+      // Cerrar sidebar en mobile tras click
+      if (window.innerWidth <= 768) {
+        const sidebar = document.querySelector(".sidebar");
+        if (sidebar) sidebar.classList.remove("active");
+      }
     });
   });
 }
@@ -204,10 +210,131 @@ function cambiarVista(idVista) {
   if (divDestino) {
     divDestino.style.display = "block";
     ejecutarLogicaModulo(idVista);
+    
+    // Mostrar/ocultar barra de búsqueda según la sección
+    actualizarBarraBusqueda(idVista);
+    
   } else {
     console.warn(`No se encontro el div con id: ${idVista}`);
   }
 }
+
+// Secciones donde se muestra la barra de búsqueda
+const seccionesConBusqueda = ['view-shifts', 'view-clients', 'view-professional', 'view-services', 'view-availability'];
+
+// Variable para trackear la sección activa
+let seccionActivaActual = 'dashboard';
+
+// Actualiza placeholder y visibilidad de la barra según la sección
+function actualizarBarraBusqueda(idVista) {
+  seccionActivaActual = idVista;
+  const searchContainer = document.getElementById('searchBarContainer');
+  const searchInput = document.getElementById('globalSearchInput');
+  
+  if (!searchContainer || !searchInput) return;
+  
+  // Limpiar búsqueda al cambiar de sección
+  limpiarBusqueda();
+  
+  if (seccionesConBusqueda.includes(idVista)) {
+    searchContainer.style.display = 'flex';
+    
+    // Personalizar placeholder según sección
+    const placeholders = {
+      'view-shifts': 'Buscar turnos por cliente, profesional...',
+      'view-clients': 'Buscar clientes por nombre, DNI...',
+      'view-professional': 'Buscar profesionales por nombre, especialidad...',
+      'view-services': 'Buscar servicios...',
+      'view-availability': 'Buscar disponibilidades...'
+    };
+    searchInput.placeholder = placeholders[idVista] || 'Buscar...';
+  } else {
+    searchContainer.style.display = 'none';
+  }
+}
+
+// Filtra el contenido activo según el texto de búsqueda
+function filtrarContenido(texto) {
+    const busqueda = texto.toLowerCase().trim();
+
+    // Encontrar la sección activa por ID
+    const seccionActiva = document.getElementById(seccionActivaActual);
+    if (!seccionActiva) return;
+
+    // Buscar todos los contenedores de cards/items
+    const containers = seccionActiva.querySelectorAll(
+        '#container-gestion-turnos, #container-gestion-profesionales, #container-gestion-clientes, #container-gestion-servicios, #container-gestion-disponibilidades, .turnos-container, .items-container'
+    );
+
+    let totalEncontrados = 0;
+
+    containers.forEach(container => {
+        if (!container) return;
+
+        // CORRECCIÓN 1: Usar 'children' para obtener solo las tarjetas directas
+        // y evitar seleccionar elementos internos (hijos) que rompen el diseño.
+        const cards = Array.from(container.children);
+
+        cards.forEach(card => {
+            // Validamos que sea un elemento visual relevante (opcional)
+            if(card.tagName === 'SCRIPT' || card.tagName === 'STYLE') return;
+
+            const textoCard = card.textContent.toLowerCase();
+
+            // CORRECCIÓN 2: Eliminamos la lógica de 'style.order'.
+            // Solo quitamos o ponemos la clase.
+            if (busqueda === '' || textoCard.includes(busqueda)) {
+                card.classList.remove('search-hidden');
+                totalEncontrados++;
+            } else {
+                card.classList.add('search-hidden');
+            }
+        });
+    });
+
+    // Búsqueda en tablas (si existen en la vista)
+    const filas = seccionActiva.querySelectorAll('tbody tr');
+    filas.forEach(fila => {
+        const textoFila = fila.textContent.toLowerCase();
+        if (busqueda === '' || textoFila.includes(busqueda)) {
+            fila.classList.remove('search-hidden');
+            totalEncontrados++;
+        } else {
+            fila.classList.add('search-hidden');
+        }
+    });
+
+    // Mostrar mensaje si no hay resultados
+    mostrarMensajeNoResultados(seccionActiva, busqueda !== '' && totalEncontrados === 0);
+}
+
+function mostrarMensajeNoResultados(seccion, mostrar) {
+  let mensaje = seccion.querySelector('.no-results-message');
+  
+  if (mostrar) {
+    if (!mensaje) {
+      mensaje = document.createElement('div');
+      mensaje.className = 'no-results-message';
+      mensaje.textContent = '🔍 No se encontraron resultados para tu búsqueda';
+      seccion.appendChild(mensaje);
+    }
+    mensaje.style.display = 'block';
+  } else if (mensaje) {
+    mensaje.style.display = 'none';
+  }
+}
+
+function limpiarBusqueda() {
+  const searchInput = document.getElementById('globalSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    filtrarContenido('');
+  }
+}
+
+// Exportar funciones globalmente
+window.filtrarContenido = filtrarContenido;
+window.limpiarBusqueda = limpiarBusqueda;
 
 /* --- HANDLER DE MODULOS Y MODALES--- */
 function ejecutarLogicaModulo(idVista) {

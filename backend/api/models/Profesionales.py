@@ -1,4 +1,8 @@
-from api.db.db_config import get_db_connection
+"""
+Modelo Profesional - Refactorizado con Connection Pooling
+"""
+from api.utils.db_helpers import get_db_cursor
+
 
 class Profesional:
 
@@ -52,103 +56,55 @@ class Profesional:
 
     @classmethod
     def get_profesional_by_id(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
-        fila = cursor.fetchone()
-
-        cursor.close()
-        connection.close()
-
-        if fila:
-            return Profesional(fila).to_json()
-        return None
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
+            fila = cursor.fetchone()
+        return Profesional(fila).to_json() if fila else None
 
     @classmethod
     def get_profesionales(cls):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM profesionales")
-        filas = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        if filas:
-            return [Profesional(fila).to_json() for fila in filas]
-        return []
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM profesionales")
+            filas = cursor.fetchall()
+        return [Profesional(fila).to_json() for fila in filas] if filas else []
 
     @classmethod
     def get_profesionales_by_idempresa(cls, empresa_id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM profesionales WHERE empresa_id = %s", (empresa_id,))
-        filas = cursor.fetchall()
-
-        cursor.close()
-        connection.close()
-
-        if filas:
-            return [Profesional(fila).to_json() for fila in filas]
-        return []
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM profesionales WHERE empresa_id = %s", (empresa_id,))
+            filas = cursor.fetchall()
+        return [Profesional(fila).to_json() for fila in filas] if filas else []
 
     @classmethod
     def create_profesional(cls, datos):
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            # --- VALIDACIÓN DE DUPLICADOS ---
+            cursor.execute(
+                """SELECT email, dni, matricula FROM profesionales 
+                   WHERE email = %s OR dni = %s OR matricula = %s""",
+                (datos["email"], datos["dni"], datos["matricula"])
+            )
+            coincidencias = cursor.fetchall()
 
-        # --- VALIDACIÓN DE DUPLICADOS ---
-        # Buscamos si existe algun registro que coincida con email, dni o matrícula
-        cursor.execute(
-            """SELECT email, dni, matricula FROM profesionales 
-               WHERE email = %s OR dni = %s OR matricula = %s""",
-            (datos["email"], datos["dni"], datos["matricula"])
-        )
-        # Usamos fetchall por si hay conflictos con múltiples registros diferentes
-        coincidencias = cursor.fetchall()
+            if coincidencias:
+                cls._verificar_duplicados(coincidencias, datos)
 
-        if coincidencias:
-            # Si hay resultados, verificamos cuál campo causó el conflicto
-            for fila in coincidencias:
-                # fila[0] = email, fila[1] = dni, fila[2] = matricula
-                db_email, db_dni, db_matricula = fila
-                
-                if db_email == datos["email"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("El email ya está registrado")
-                
-                if db_dni == datos["dni"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("El DNI ya está registrado")
-                
-                if db_matricula == datos["matricula"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("La matrícula ya está registrada")
-
-        # --- FIN VALIDACIÓN ---
-
-        especialidad = datos.get("especialidad", "Consulta General")
-        cursor.execute(
-            """INSERT INTO profesionales 
-               (empresa_id, name, surname, email, dni, matricula, especialidad, created_at) 
-               VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())""",
-            (datos["empresa_id"], datos["name"], datos["surname"], 
-             datos["email"], datos["dni"], datos["matricula"], especialidad)
-        )
-        connection.commit()
-        nuevo_id = cursor.lastrowid
-        
-        cursor.execute("SELECT * FROM profesionales WHERE id = %s", (nuevo_id,))
-        nuevo = cursor.fetchone()
-
-        cursor.close()
-        connection.close()
+            # --- INSERCIÓN ---
+            especialidad = datos.get("especialidad", "Consulta General")
+            cursor.execute(
+                """INSERT INTO profesionales 
+                   (empresa_id, name, surname, email, dni, matricula, especialidad, created_at) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())""",
+                (datos["empresa_id"], datos["name"], datos["surname"], 
+                 datos["email"], datos["dni"], datos["matricula"], especialidad)
+            )
+            nuevo_id = cursor.lastrowid
+            
+            cursor.execute("SELECT * FROM profesionales WHERE id = %s", (nuevo_id,))
+            nuevo = cursor.fetchone()
 
         return Profesional(nuevo).to_json()
 
@@ -157,87 +113,71 @@ class Profesional:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT id FROM profesionales WHERE id = %s", (id,))
+            if not cursor.fetchone():
+                raise ValueError("No existe el recurso solicitado")
 
-        cursor.execute("SELECT id FROM profesionales WHERE id = %s", (id,))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el recurso solicitado")
+            # --- VALIDACIÓN DE DUPLICADOS PARA UPDATE ---
+            cursor.execute(
+                """SELECT email, dni, matricula FROM profesionales 
+                   WHERE (email = %s OR dni = %s OR matricula = %s) AND id != %s""",
+                (datos["email"], datos["dni"], datos["matricula"], id)
+            )
+            coincidencias = cursor.fetchall()
 
-        # --- VALIDACIÓN DE DUPLICADOS PARA UPDATE ---
-        # Buscamos coincidencias excluyendo el ID actual para permitir guardar los mismos datos propios
-        cursor.execute(
-            """SELECT email, dni, matricula FROM profesionales 
-               WHERE (email = %s OR dni = %s OR matricula = %s) AND id != %s""",
-            (datos["email"], datos["dni"], datos["matricula"], id)
-        )
-        coincidencias = cursor.fetchall()
+            if coincidencias:
+                cls._verificar_duplicados(coincidencias, datos)
 
-        if coincidencias:
-            for fila in coincidencias:
-                db_email, db_dni, db_matricula = fila
-                
-                if db_email == datos["email"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("El email ya está registrado")
-                
-                if db_dni == datos["dni"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("El DNI ya está registrado")
-                
-                if db_matricula == datos["matricula"]:
-                    cursor.close()
-                    connection.close()
-                    raise ValueError("La matrícula ya está registrada")
-        # --- FIN VALIDACIÓN ---
+            # --- ACTUALIZACIÓN ---
+            especialidad = datos.get("especialidad", "Consulta General")
+            cursor.execute(
+                """UPDATE profesionales SET 
+                   empresa_id=%s, name=%s, surname=%s, email=%s, dni=%s, matricula=%s, especialidad=%s 
+                   WHERE id=%s""",
+                (datos["empresa_id"], datos["name"], datos["surname"], 
+                 datos["email"], datos["dni"], datos["matricula"], especialidad, id)
+            )
 
-        especialidad = datos.get("especialidad", "Consulta General")
-        cursor.execute(
-            """UPDATE profesionales SET 
-               empresa_id=%s, name=%s, surname=%s, email=%s, dni=%s, matricula=%s, especialidad=%s 
-               WHERE id=%s""",
-            (datos["empresa_id"], datos["name"], datos["surname"], 
-             datos["email"], datos["dni"], datos["matricula"], especialidad, id)
-        )
-        connection.commit()
-
-        cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
-        actualizado = cursor.fetchone()
-
-        cursor.close()
-        connection.close()
+            cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
+            actualizado = cursor.fetchone()
 
         return Profesional(actualizado).to_json()
 
     @classmethod
     def delete_profesional(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
+            eliminado = cursor.fetchone()
 
-        cursor.execute("SELECT * FROM profesionales WHERE id = %s", (id,))
-        eliminado = cursor.fetchone()
+            if eliminado is None:
+                raise ValueError("No existe el recurso solicitado")
 
-        if eliminado is None:
-            cursor.close()
-            connection.close()
-            raise ValueError("No existe el recurso solicitado")
+            # --- ELIMINACIÓN EN CASCADA ---
+            # 1. Eliminar Turnos asociados
+            cursor.execute("DELETE FROM turnos WHERE profesional_id = %s", (id,))
+            
+            # 2. Eliminar Disponibilidades asociadas
+            cursor.execute("DELETE FROM disponibilidades WHERE profesional_id = %s", (id,))
 
-        # --- ELIMINACIÓN EN CASCADA MANUAL ---
-        # 1. Eliminar Turnos asociados a este profesional (evita registros huérfanos)
-        cursor.execute("DELETE FROM turnos WHERE profesional_id = %s", (id,))
-        
-        # 2. Eliminar Disponibilidades asociadas (Pedido explícito)
-        cursor.execute("DELETE FROM disponibilidades WHERE profesional_id = %s", (id,))
-
-        # 3. Eliminar el Profesional
-        cursor.execute("DELETE FROM profesionales WHERE id = %s", (id,))
-        connection.commit()
-
-        cursor.close()
-        connection.close()
+            # 3. Eliminar el Profesional
+            cursor.execute("DELETE FROM profesionales WHERE id = %s", (id,))
 
         return Profesional(eliminado).to_json()
+
+    # ----------------- HELPERS PRIVADOS ----------------- #
+    
+    @classmethod
+    def _verificar_duplicados(cls, coincidencias, datos):
+        """Verifica qué campo está duplicado y lanza error apropiado"""
+        for fila in coincidencias:
+            db_email, db_dni, db_matricula = fila
+            
+            if db_email == datos["email"]:
+                raise ValueError("El email ya está registrado")
+            
+            if db_dni == datos["dni"]:
+                raise ValueError("El DNI ya está registrado")
+            
+            if db_matricula == datos["matricula"]:
+                raise ValueError("La matrícula ya está registrada")

@@ -1,15 +1,17 @@
 import jwt
+import logging
 from functools import wraps
 from flask import jsonify, request
 from api import app
-from api.db.db_config import get_db_connection
+from api.utils.db_helpers import get_db_cursor
+
+logger = logging.getLogger(__name__)
 
 def requiere_token(func):
     @wraps(func)
     def decorador(*args, **kwargs):
-        # Imprime los argumentos pasados a la función
-        print(args)
-        print(kwargs)
+        # Log de debug (solo se muestra si DEBUG está habilitado)
+        logger.debug(f"requiere_token: kwargs={kwargs}")
 
         # Verifica que exista el header 'x-access-token'
         if 'x-access-token' not in request.headers:
@@ -63,8 +65,7 @@ def misma_empresa(tabla):
     def decorador(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            print(args)
-            print(kwargs)
+            logger.debug(f"misma_empresa({tabla}): kwargs={kwargs}")
 
             # Intenta obtener el id_empresa desde los argumentos de la ruta
             id_empresa = None
@@ -91,30 +92,20 @@ def misma_empresa(tabla):
             if not id_recurso:
                  return jsonify({"message": "No se encontró el parámetro 'id' en la URL"}), 400
 
-            connection = None
-            cursor = None
             try:
-                connection = get_db_connection()
-                cursor = connection.cursor()
-
-                # Consulta SQL dinámica para la tabla, pero segura en parámetros
-                query = f"SELECT 1 FROM {tabla} WHERE id = %s AND empresa_id = %s"
-                
-                cursor.execute(query, (id_recurso, id_empresa))
-                resultado = cursor.fetchone()
-
-                cursor.close()
-                connection.close()
+                with get_db_cursor() as cursor:
+                    # Consulta SQL dinámica para la tabla, pero segura en parámetros
+                    query = f"SELECT 1 FROM {tabla} WHERE id = %s AND empresa_id = %s"
+                    cursor.execute(query, (id_recurso, id_empresa))
+                    resultado = cursor.fetchone()
 
                 # Si no devuelve nada, el recurso no existe o no pertenece a la empresa
                 if not resultado:
                     return jsonify({"message": "Recurso no encontrado o no autorizado"}), 404
 
             except Exception as e:
-                # Cierre de recursos en caso de error
-                if cursor: cursor.close()
-                if connection: connection.close()
-                return jsonify({"message": f"Error de base de datos: {str(e)}"}), 500
+                logger.error(f"Error en misma_empresa: {e}")
+                return jsonify({"message": "Error de base de datos"}), 500
 
             # Si todo está correcto, ejecuta la función original
             return func(*args, **kwargs)
@@ -131,8 +122,7 @@ def validar_referencias(mapa_referencias):
     def decorador(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            print(args)
-            print(kwargs)
+            logger.debug(f"validar_referencias: kwargs={kwargs}")
 
             # Intenta obtener el id_empresa desde los argumentos de la ruta
             id_empresa = None
@@ -157,38 +147,29 @@ def validar_referencias(mapa_referencias):
                 # Si no hay body y esperamos validar algo del body, es un error (o lo ignoramos)
                 return jsonify({"message": "Se esperaba un cuerpo JSON para validar referencias"}), 400
 
-            connection = None
-            cursor = None
             try:
-                connection = get_db_connection()
-                cursor = connection.cursor()
+                with get_db_cursor() as cursor:
+                    for campo_json, tabla_bd in mapa_referencias.items():
+                        # Solo validamos si el campo viene en el JSON
+                        if campo_json in datos:
+                            valor_id = datos[campo_json]
+                            
+                            # Si es None o 0, lo saltamos
+                            if not valor_id: 
+                                continue
 
-                for campo_json, tabla_bd in mapa_referencias.items():
-                    # Solo validamos si el campo viene en el JSON
-                    if campo_json in datos:
-                        valor_id = datos[campo_json]
-                        
-                        # Si es None o 0, lo saltamos
-                        if not valor_id: 
-                            continue
-
-                        # Validamos contra la BD: ¿Este ID foráneo es de mi empresa?
-                        query = f"SELECT 1 FROM {tabla_bd} WHERE id = %s AND empresa_id = %s"
-                        cursor.execute(query, (valor_id, id_empresa))
-                        
-                        if not cursor.fetchone():
-                            cursor.close()
-                            connection.close()
-                            return jsonify({
-                                "message": f"Acceso Denegado: El {campo_json} ({valor_id}) no pertenece a su empresa."
-                            }), 403
-                
-                cursor.close()
-                connection.close()
+                            # Validamos contra la BD: ¿Este ID foráneo es de mi empresa?
+                            query = f"SELECT 1 FROM {tabla_bd} WHERE id = %s AND empresa_id = %s"
+                            cursor.execute(query, (valor_id, id_empresa))
+                            
+                            if not cursor.fetchone():
+                                return jsonify({
+                                    "message": f"Acceso Denegado: El {campo_json} ({valor_id}) no pertenece a su empresa."
+                                }), 403
 
             except Exception as e:
-                if connection: connection.close()
-                return jsonify({"message": f"Error validando referencias: {str(e)}"}), 500
+                logger.error(f"Error validando referencias: {e}")
+                return jsonify({"message": "Error validando referencias"}), 500
 
             return func(*args, **kwargs)
         return wrapper

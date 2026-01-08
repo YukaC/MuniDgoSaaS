@@ -9,16 +9,16 @@
 -- ============================================================
 -- BLOQUE 1: CREAR BASE DE DATOS
 -- ============================================================
-DROP DATABASE IF EXISTS ProyectoTurnos;
-CREATE DATABASE ProyectoTurnos DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE ProyectoTurnos;
+DROP DATABASE IF EXISTS turnos_dorrego;
+CREATE DATABASE turnos_dorrego DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE turnos_dorrego;
 
 -- ============================================================
 -- BLOQUE 2: CREAR USUARIO Y PERMISOS (OPCIONAL)
 -- ============================================================
 -- Descomentar si necesitas crear un usuario específico para la API
 -- CREATE USER IF NOT EXISTS 'user_api_1'@'localhost' IDENTIFIED BY 'pass_user_1';
--- GRANT ALL PRIVILEGES ON ProyectoTurnos.* TO 'user_api_1'@'localhost' WITH GRANT OPTION;
+-- GRANT ALL PRIVILEGES ON turnos_dorrego.* TO 'user_api_1'@'localhost' WITH GRANT OPTION;
 -- FLUSH PRIVILEGES;
 
 -- ============================================================

@@ -1,8 +1,14 @@
-from api.db.db_config import get_db_connection
+"""
+Modelo Cliente - Refactorizado con Connection Pooling
+"""
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app
 import jwt
 import datetime
+import os
+
+from api.utils.db_helpers import get_db_cursor
+
 
 class Cliente:
 
@@ -60,33 +66,24 @@ class Cliente:
 
     @classmethod
     def get_cliente_by_id(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
-        fila = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+            fila = cursor.fetchone()
         return Cliente(fila).to_json() if fila else None
 
     @classmethod
     def get_cliente_by_dni(cls, dni):
         """Método auxiliar útil para login"""
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM clientes WHERE dni = %s", (dni,))
-        fila = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM clientes WHERE dni = %s", (dni,))
+            fila = cursor.fetchone()
         return Cliente(fila) if fila else None
 
     @classmethod
     def get_clientes(cls):
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM clientes")
-        filas = cursor.fetchall()
-        cursor.close()
-        connection.close()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM clientes")
+            filas = cursor.fetchall()
         return [Cliente(fila).to_json() for fila in filas] if filas else []
 
     @classmethod
@@ -94,48 +91,39 @@ class Cliente:
         if not cls.validar(datos):
             raise ValueError("Datos inválidos. Se requiere DNI, nombre, apellido y contraseña")
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        # Validar que el DNI no esté duplicado
-        cursor.execute("SELECT id FROM clientes WHERE dni = %s", (datos["dni"],))
-        if cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("Ya existe un cliente registrado con este DNI")
-
-        # Validar email si se proporciona
-        if datos.get("email"):
-            cursor.execute("SELECT id FROM clientes WHERE email = %s", (datos["email"],))
+        with get_db_cursor() as cursor:
+            # Validar que el DNI no esté duplicado
+            cursor.execute("SELECT id FROM clientes WHERE dni = %s", (datos["dni"],))
             if cursor.fetchone():
-                cursor.close()
-                connection.close()
-                raise ValueError("Ya existe un cliente registrado con este email")
+                raise ValueError("Ya existe un cliente registrado con este DNI")
 
-        # Hash de la contraseña
-        password_hash = generate_password_hash(datos["password"])
+            # Validar email si se proporciona
+            if datos.get("email"):
+                cursor.execute("SELECT id FROM clientes WHERE email = %s", (datos["email"],))
+                if cursor.fetchone():
+                    raise ValueError("Ya existe un cliente registrado con este email")
 
-        # Insertar nuevo cliente
-        cursor.execute(
-            """INSERT INTO clientes 
-               (dni, nombre, apellido, email, telefono, password, activo, created_at) 
-               VALUES (%s, %s, %s, %s, %s, %s, TRUE, NOW())""",
-            (
-                datos["dni"],
-                datos["nombre"],
-                datos["apellido"],
-                datos.get("email"),
-                datos.get("telefono"),
-                password_hash
+            # Hash de la contraseña
+            password_hash = generate_password_hash(datos["password"])
+
+            # Insertar nuevo cliente
+            cursor.execute(
+                """INSERT INTO clientes 
+                   (dni, nombre, apellido, email, telefono, password, activo, created_at) 
+                   VALUES (%s, %s, %s, %s, %s, %s, TRUE, NOW())""",
+                (
+                    datos["dni"],
+                    datos["nombre"],
+                    datos["apellido"],
+                    datos.get("email"),
+                    datos.get("telefono"),
+                    password_hash
+                )
             )
-        )
-        connection.commit()
-        nuevo_id = cursor.lastrowid
+            nuevo_id = cursor.lastrowid
 
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (nuevo_id,))
-        nuevo = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            cursor.execute("SELECT * FROM clientes WHERE id = %s", (nuevo_id,))
+            nuevo = cursor.fetchone()
 
         return Cliente(nuevo).to_json()
 
@@ -150,7 +138,7 @@ class Cliente:
         if not cliente_obj:
             raise ValueError("DNI o contraseña incorrectos")
 
-        # Acceder a atributos privados usando el objeto
+        # Verificar cuenta activa
         if not cliente_obj._Cliente__activo:
             raise ValueError("Cuenta desactivada. Contacte al administrador")
 
@@ -159,11 +147,12 @@ class Cliente:
             raise ValueError("DNI o contraseña incorrectos")
 
         # Generar token JWT
+        jwt_expiration = int(os.getenv('JWT_CLIENTE_EXPIRATION_MINUTES', 60))
         token = jwt.encode(
             {
                 'cliente_id': cliente_obj._Cliente__id,
                 'dni': cliente_obj._Cliente__dni,
-                'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
+                'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=jwt_expiration)
             },
             current_app.config["SECRET_KEY"],
             algorithm="HS256"
@@ -176,78 +165,57 @@ class Cliente:
 
     @classmethod
     def update_cliente(cls, id, datos):
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+            if not cursor.fetchone():
+                raise ValueError("Cliente no encontrado")
 
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
-        if not cursor.fetchone():
-            cursor.close()
-            connection.close()
-            raise ValueError("Cliente no encontrado")
+            # Validar DNI único si se está cambiando
+            if "dni" in datos:
+                cursor.execute("SELECT id FROM clientes WHERE dni = %s AND id != %s", (datos["dni"], id))
+                if cursor.fetchone():
+                    raise ValueError("Ya existe otro cliente con este DNI")
 
-        # Validar DNI único si se está cambiando
-        if "dni" in datos:
-            cursor.execute("SELECT id FROM clientes WHERE dni = %s AND id != %s", (datos["dni"], id))
-            if cursor.fetchone():
-                cursor.close()
-                connection.close()
-                raise ValueError("Ya existe otro cliente con este DNI")
+            # Validar email único si se está cambiando
+            if "email" in datos and datos["email"]:
+                cursor.execute("SELECT id FROM clientes WHERE email = %s AND id != %s", (datos["email"], id))
+                if cursor.fetchone():
+                    raise ValueError("Ya existe otro cliente con este email")
 
-        # Validar email único si se está cambiando
-        if "email" in datos and datos["email"]:
-            cursor.execute("SELECT id FROM clientes WHERE email = %s AND id != %s", (datos["email"], id))
-            if cursor.fetchone():
-                cursor.close()
-                connection.close()
-                raise ValueError("Ya existe otro cliente con este email")
+            # Si se actualiza la contraseña, hashearla
+            if "password" in datos:
+                datos["password"] = generate_password_hash(datos["password"])
 
-        # Si se actualiza la contraseña, hashearla
-        if "password" in datos:
-            datos["password"] = generate_password_hash(datos["password"])
+            # Construir query de actualización dinámicamente
+            campos = []
+            valores = []
+            for campo in ["dni", "nombre", "apellido", "email", "telefono", "password"]:
+                if campo in datos:
+                    campos.append(f"{campo} = %s")
+                    valores.append(datos[campo])
 
-        # Construir query de actualización dinámicamente
-        campos = []
-        valores = []
-        for campo in ["dni", "nombre", "apellido", "email", "telefono", "password"]:
-            if campo in datos:
-                campos.append(f"{campo} = %s")
-                valores.append(datos[campo])
+            if not campos:
+                raise ValueError("No hay campos para actualizar")
 
-        if not campos:
-            cursor.close()
-            connection.close()
-            raise ValueError("No hay campos para actualizar")
+            valores.append(id)
+            query = f"UPDATE clientes SET {', '.join(campos)}, updated_at = NOW() WHERE id = %s"
+            cursor.execute(query, valores)
 
-        valores.append(id)
-        query = f"UPDATE clientes SET {', '.join(campos)}, updated_at = NOW() WHERE id = %s"
-        cursor.execute(query, valores)
-        connection.commit()
-
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
-        actualizado = cursor.fetchone()
-        cursor.close()
-        connection.close()
+            cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+            actualizado = cursor.fetchone()
 
         return Cliente(actualizado).to_json()
 
     @classmethod
     def delete_cliente(cls, id):
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        with get_db_cursor() as cursor:
+            cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
+            eliminado = cursor.fetchone()
+            
+            if not eliminado:
+                raise ValueError("Cliente no encontrado")
 
-        cursor.execute("SELECT * FROM clientes WHERE id = %s", (id,))
-        eliminado = cursor.fetchone()
-        
-        if not eliminado:
-            cursor.close()
-            connection.close()
-            raise ValueError("Cliente no encontrado")
-
-        # En lugar de eliminar, desactivar la cuenta (soft delete)
-        cursor.execute("UPDATE clientes SET activo = FALSE WHERE id = %s", (id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
+            # Soft delete - desactivar en lugar de eliminar
+            cursor.execute("UPDATE clientes SET activo = FALSE WHERE id = %s", (id,))
 
         return Cliente(eliminado).to_json()
-
