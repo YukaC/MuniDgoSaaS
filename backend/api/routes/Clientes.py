@@ -5,6 +5,7 @@ from flask import request, jsonify
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
+from api.config import Config
 from api.models.Servicios import Servicio
 from api.models.Profesionales import Profesional
 from api.models.Disponibilidades import Disponibilidad
@@ -292,7 +293,7 @@ def obtener_horarios_disponibles(id_empresa):
             return jsonify({"message": "Profesional no encontrado"}), 404
         
         # Obtener duración del servicio
-        duracion_servicio = 60
+        duracion_servicio = Config.DEFAULT_SERVICE_DURATION_MINUTES
         if servicio_id:
             servicio = validate_servicio_empresa(servicio_id, id_empresa)
             if servicio:
