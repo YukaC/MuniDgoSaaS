@@ -8,6 +8,7 @@ from api.models.Servicios import Servicio
 from api.utils.seguridad import requiere_token, misma_empresa
 from api.cache.cache_manager import cache_manager
 from api.cache.cache_keys import CacheKeys
+from api.utils.sanitizer import sanitize_string
 
 
 # ---------------------- OBTENER TODOS ----------------------
@@ -62,6 +63,12 @@ def obtener_servicio(id_empresa, id):
 def crear_servicio():
     datos = request.get_json()
     datos['empresa_id'] = int(request.headers['id-empresa'])
+    
+    # Sanitizar inputs
+    if 'name' in datos:
+        datos['name'] = sanitize_string(datos.get('name'), max_length=100)
+    if 'description' in datos:
+        datos['description'] = sanitize_string(datos.get('description'), max_length=500)
 
     try:
         nuevo = Servicio.create_servicio(datos)
@@ -83,6 +90,12 @@ def crear_servicio():
 def actualizar_servicio(id, id_empresa):
     datos = request.get_json()
     datos['empresa_id'] = int(id_empresa)
+    
+    # Sanitizar inputs
+    if 'name' in datos:
+        datos['name'] = sanitize_string(datos.get('name'), max_length=100)
+    if 'description' in datos:
+        datos['description'] = sanitize_string(datos.get('description'), max_length=500)
 
     try:
         actualizado = Servicio.update_servicio(id, datos)

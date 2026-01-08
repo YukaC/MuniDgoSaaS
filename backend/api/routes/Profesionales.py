@@ -9,6 +9,7 @@ from api.utils.seguridad import requiere_token, misma_empresa
 from api.utils.db_helpers import get_db_cursor, validate_profesional_empresa, DIAS_SEMANA
 from api.cache.cache_manager import cache_manager
 from api.cache.cache_keys import CacheKeys
+from api.utils.sanitizer import sanitize_string, sanitize_dni, sanitize_email
 
 
 # ---------------------- OBTENER TODOS ----------------------
@@ -64,6 +65,20 @@ def obtener_profesional(id, id_empresa):
 def crear_profesional():
     datos = request.get_json()
     datos['empresa_id'] = int(request.headers['id-empresa'])
+    
+    # Sanitizar inputs
+    if 'name' in datos:
+        datos['name'] = sanitize_string(datos.get('name'), max_length=100)
+    if 'surname' in datos:
+        datos['surname'] = sanitize_string(datos.get('surname'), max_length=100)
+    if 'email' in datos:
+        datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+    if 'dni' in datos:
+        datos['dni'] = sanitize_dni(datos.get('dni'))
+    if 'matricula' in datos:
+        datos['matricula'] = sanitize_string(datos.get('matricula'), max_length=50)
+    if 'especialidad' in datos:
+        datos['especialidad'] = sanitize_string(datos.get('especialidad'), max_length=100)
 
     try:
         nuevo = Profesional.create_profesional(datos)
@@ -85,6 +100,20 @@ def crear_profesional():
 def actualizar_profesional(id_empresa, id):
     datos = request.get_json()
     datos['empresa_id'] = int(id_empresa)
+    
+    # Sanitizar inputs
+    if 'name' in datos:
+        datos['name'] = sanitize_string(datos.get('name'), max_length=100)
+    if 'surname' in datos:
+        datos['surname'] = sanitize_string(datos.get('surname'), max_length=100)
+    if 'email' in datos:
+        datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+    if 'dni' in datos:
+        datos['dni'] = sanitize_dni(datos.get('dni'))
+    if 'matricula' in datos:
+        datos['matricula'] = sanitize_string(datos.get('matricula'), max_length=50)
+    if 'especialidad' in datos:
+        datos['especialidad'] = sanitize_string(datos.get('especialidad'), max_length=100)
 
     try:
         actualizado = Profesional.update_profesional(id, datos)

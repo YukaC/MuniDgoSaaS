@@ -3,6 +3,7 @@ from api.models.Empresas import Empresa
 from api.utils.seguridad import requiere_token
 from api.utils.rate_limit import rate_limit_login
 from flask import request, jsonify
+from api.utils.sanitizer import sanitize_string, sanitize_email
 
 # ----------------------------
 #   CREATE (Registrar Empresa)
@@ -10,6 +11,15 @@ from flask import request, jsonify
 @app.route("/registro", methods=["POST"])
 def registrar_empresa():
     datos = request.get_json()
+    
+    # Sanitizar inputs
+    if 'nombre' in datos:
+        datos['nombre'] = sanitize_string(datos.get('nombre'), max_length=200)
+    if 'username' in datos:
+        datos['username'] = sanitize_string(datos.get('username'), max_length=50)
+    if 'email' in datos:
+        datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+    
     try:
         nuevo = Empresa.register(datos)
         return jsonify(nuevo), 201
@@ -80,6 +90,15 @@ def get_empresa_username(username):
 @requiere_token
 def actualizar_empresa(id_empresa):
     datos = request.get_json()
+    
+    # Sanitizar inputs
+    if 'nombre' in datos:
+        datos['nombre'] = sanitize_string(datos.get('nombre'), max_length=200)
+    if 'username' in datos:
+        datos['username'] = sanitize_string(datos.get('username'), max_length=50)
+    if 'email' in datos:
+        datos['email'] = sanitize_email(datos.get('email')) if datos.get('email') else None
+    
     try:
         actualizado = Empresa.update_empresa(id_empresa, datos)
         return jsonify(actualizado), 200

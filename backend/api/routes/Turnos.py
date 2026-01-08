@@ -14,6 +14,7 @@ from api.utils.db_helpers import (
 from api.utils.formatters import format_horario_slot
 from api.cache.cache_manager import cache_manager
 from api.cache.cache_keys import CacheKeys
+from api.utils.sanitizer import sanitize_string, sanitize_observaciones
 
 
 # ---------------------- OBTENER TODOS ----------------------
@@ -59,6 +60,12 @@ def obtener_turno(id, id_empresa):
 def crear_turno():
     datos = request.get_json()
     datos['empresa_id'] = int(request.headers['id-empresa'])
+    
+    # Sanitizar inputs
+    if 'cliente_name' in datos:
+        datos['cliente_name'] = sanitize_string(datos.get('cliente_name'), max_length=200)
+    if 'observaciones' in datos:
+        datos['observaciones'] = sanitize_observaciones(datos.get('observaciones'))
 
     try:
         nuevo = Turno.create_turno(datos)
@@ -89,6 +96,12 @@ def crear_turno():
 def actualizar_turno(id, id_empresa):
     datos = request.get_json()
     datos['empresa_id'] = int(id_empresa)
+    
+    # Sanitizar inputs
+    if 'cliente_name' in datos:
+        datos['cliente_name'] = sanitize_string(datos.get('cliente_name'), max_length=200)
+    if 'observaciones' in datos:
+        datos['observaciones'] = sanitize_observaciones(datos.get('observaciones'))
     
     # Validar servicio_id solo si se proporciona
     if datos.get('servicio_id'):
