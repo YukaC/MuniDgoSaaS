@@ -1,10 +1,7 @@
 /* --- CONFIGURACION GLOBAL DE LA API --- */
 
 // URL base del backend Flask
-// Si estamos en desarrollo (Live Server port != 5000), apuntamos a localhost:5000
-// En producción (o servido por Flask), usamos ruta relativa
-const isLocalDev = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '5000';
-const API_BASE_URL = isLocalDev ? "http://127.0.0.1:5000" : "";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 // rutas base de la API
 const API_ROUTES = {

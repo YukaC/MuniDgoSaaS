@@ -3,7 +3,7 @@ Configuración principal de la aplicación Flask
 Optimizado para producción con variables de entorno
 """
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -13,13 +13,7 @@ load_dotenv()
 
 def create_app(config_name=None):
     """Factory pattern para crear la aplicación Flask"""
-    
-    # Configurar rutas estáticas para servir el Frontend
-    # backend/api/__init__.py -> backend/api -> backend -> root -> frontend
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    frontend_dir = os.path.join(base_dir, 'frontend')
-    
-    app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
+    app = Flask(__name__)
     
     # ==================== CONFIGURACIÓN ====================
     
@@ -62,7 +56,6 @@ def create_app(config_name=None):
     )
     
     # ==================== CORS ====================
-    # Permitir requests desde el mismo origen (frontend servido por flask) + externos si es necesario
     cors_origins = os.getenv('CORS_ORIGINS', '*')
     if cors_origins != '*':
         cors_origins = [origin.strip() for origin in cors_origins.split(',')]
@@ -103,12 +96,7 @@ def create_app(config_name=None):
     
     @app.errorhandler(404)
     def not_found(error):
-        # Si es una petición API (JSON), devuelve 404 JSON.
-        # Si es navegador (HTML), podría ser una ruta del frontend, intentamos servir index.html?
-        # Por ahora simple: JSON para /api/..., 404 para otros.
-        if request.path.startswith('/api/') or request.path.startswith('/empresa/') or request.path.startswith('/cliente/'):
-             return jsonify({"message": "Recurso no encontrado"}), 404
-        return jsonify({"message": "Página no encontrada"}), 404
+        return jsonify({"message": "Recurso no encontrado"}), 404
     
     @app.errorhandler(429)
     def rate_limit_exceeded(error):
@@ -121,15 +109,10 @@ def create_app(config_name=None):
             return jsonify({"message": "Error interno del servidor"}), 500
         return jsonify({"message": "Error interno", "error": str(error)}), 500
     
-    # ==================== RUTA DE FRONTEND ====================
+    # ==================== RUTA DE HEALTH CHECK ====================
     @app.route('/')
-    def index():
-        return app.send_static_file('index.html')
-
-    # También servir cliente.html en su ruta
-    @app.route('/cliente.html')
-    def cliente_portal():
-        return app.send_static_file('cliente.html')
+    def test():
+        return jsonify({"message": "API en funcionamiento", "version": "2.0"})
     
     @app.route('/health')
     def health_check():
