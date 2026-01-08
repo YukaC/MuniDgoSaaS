@@ -28,53 +28,60 @@ from api import app
 # ==================== ENDPOINTS PARA CLIENTES AUTENTICADOS ====================
 
 
-# ---------------------- PERFIL DEL CLIENTE (VER Y EDITAR) ----------------------
-@app.route('/cliente/perfil', methods=['GET', 'PUT'])
+# ---------------------- PERFIL DEL CLIENTE (VER) ----------------------
+@app.route('/cliente/perfil', methods=['GET'])
 @requiere_token_cliente
-def gestionar_perfil_cliente():
-    """Endpoint para ver y editar el perfil del cliente autenticado"""
+def obtener_perfil_cliente():
+    """Obtiene los datos del perfil del cliente autenticado"""
     cliente_id = request.cliente_id
     
-    if request.method == 'GET':
-        try:
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    "SELECT id, dni, nombre, apellido, email, telefono FROM clientes WHERE id = %s", 
-                    (cliente_id,)
-                )
-                cliente = cursor.fetchone()
-                
-                if not cliente:
-                    return jsonify({"message": "Cliente no encontrado"}), 404
-                
-                return jsonify(format_cliente_row(cliente)), 200
-        except Exception as e:
-            return jsonify({"message": str(e)}), 500
+    try:
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                "SELECT id, dni, nombre, apellido, email, telefono FROM clientes WHERE id = %s", 
+                (cliente_id,)
+            )
+            cliente = cursor.fetchone()
             
-    elif request.method == 'PUT':
-        datos = request.get_json()
-        try:
-            with get_db_cursor() as cursor:
-                # Validar e-mail único si se cambia
-                if 'email' in datos and datos['email']:
-                    cursor.execute(
-                        "SELECT id FROM clientes WHERE email = %s AND id != %s", 
-                        (datos['email'], cliente_id)
-                    )
-                    if cursor.fetchone():
-                        return jsonify({"message": "El email ya está registrado"}), 400
+            if not cliente:
+                return jsonify({"message": "Cliente no encontrado"}), 404
+            
+            return jsonify(format_cliente_row(cliente)), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+
+# ---------------------- PERFIL DEL CLIENTE (ACTUALIZAR) ----------------------
+@app.route('/cliente/perfil', methods=['PATCH'])
+@requiere_token_cliente
+def actualizar_perfil_cliente():
+    """Actualiza parcialmente el perfil del cliente autenticado"""
+    cliente_id = request.cliente_id
+    datos = request.get_json()
+    
+    try:
+        with get_db_cursor() as cursor:
+            # Validar e-mail único si se cambia
+            if 'email' in datos and datos['email']:
+                cursor.execute(
+                    "SELECT id FROM clientes WHERE email = %s AND id != %s", 
+                    (datos['email'], cliente_id)
+                )
+                if cursor.fetchone():
+                    return jsonify({"message": "No se pudo actualizar. Verifique los datos ingresados."}), 400
+            
+            campos, valores = _build_update_fields(datos, ['nombre', 'apellido', 'email', 'telefono', 'password'])
+            
+            if not campos:
+                return jsonify({"message": "No hay datos para actualizar"}), 400
                 
-                campos, valores = _build_update_fields(datos, ['nombre', 'apellido', 'email', 'telefono', 'password'])
-                
-                if not campos:
-                    return jsonify({"message": "No hay datos para actualizar"}), 400
-                    
-                valores.append(cliente_id)
-                cursor.execute(f"UPDATE clientes SET {', '.join(campos)} WHERE id = %s", valores)
-                
-            return jsonify({"message": "Perfil actualizado correctamente"}), 200
-        except Exception as e:
-            return jsonify({"message": str(e)}), 500
+            valores.append(cliente_id)
+            cursor.execute(f"UPDATE clientes SET {', '.join(campos)} WHERE id = %s", valores)
+            
+        return jsonify({"message": "Perfil actualizado correctamente"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
 
 
 # ---------------------- CRUD CLIENTES (ADMIN) ----------------------
