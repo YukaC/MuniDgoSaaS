@@ -1,6 +1,7 @@
 """
 Claves de Cache - Definición centralizada de todas las claves
 """
+from api.config import Config
 
 
 class CacheKeys:
@@ -9,11 +10,11 @@ class CacheKeys:
     Usar estos patrones para consistencia.
     """
     
-    # ==================== TTL (segundos) ====================
-    TTL_SHORT = 30          # 30 segundos - datos que cambian frecuentemente
-    TTL_MEDIUM = 120        # 2 minutos - datos moderadamente estables
-    TTL_LONG = 300          # 5 minutos - datos estables
-    TTL_VERY_LONG = 600     # 10 minutos - datos casi estáticos
+    # ==================== TTL (segundos) - desde Config ====================
+    TTL_SHORT = Config.CACHE_TTL_SHORT
+    TTL_MEDIUM = Config.CACHE_TTL_MEDIUM
+    TTL_LONG = Config.CACHE_TTL_LONG
+    TTL_VERY_LONG = Config.CACHE_TTL_VERY_LONG
     
     # ==================== EMPRESAS ====================
     EMPRESAS_LISTA = "empresas:lista"                          # TTL_VERY_LONG

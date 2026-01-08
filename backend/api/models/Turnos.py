@@ -3,6 +3,7 @@ Modelo Turno - Refactorizado con Connection Pooling
 """
 from api.utils.db_helpers import get_db_cursor
 from api.utils.formatters import format_turno_row
+from api.config import Config
 
 
 class Turno:
@@ -248,7 +249,7 @@ class Turno:
     @classmethod
     def _get_duracion_servicio(cls, datos):
         """Obtiene la duración del servicio o calcula por defecto según especialidad"""
-        duracion_nueva = 30  # Por defecto
+        duracion_nueva = Config.DURATION_SHORT  # Por defecto
         
         with get_db_cursor() as cursor:
             if datos.get("servicio_id"):
@@ -266,10 +267,10 @@ class Turno:
                 if prof:
                     especialidad = prof[0] or "Consulta General"
                     if "Cardiología" in especialidad or "Psiquiatría" in especialidad:
-                        duracion_nueva = 45
+                        duracion_nueva = Config.DURATION_MEDIUM
                     elif "Cirugía" in especialidad:
-                        duracion_nueva = 60
+                        duracion_nueva = Config.DURATION_LONG
                     else:
-                        duracion_nueva = 30
+                        duracion_nueva = Config.DURATION_SHORT
         
         return duracion_nueva
