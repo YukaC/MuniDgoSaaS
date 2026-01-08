@@ -207,10 +207,10 @@ class Empresa:
             db_nombre, db_username, db_email = fila
             
             if db_nombre == datos["nombre"]:
-                raise ValueError("El nombre de la empresa ya está registrado")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")
             
             if db_username == datos["username"]:
-                raise ValueError("El nombre de usuario ya está registrado")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")
             
             if db_email == datos["email"]:
-                raise ValueError("El email ya está registrado")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")

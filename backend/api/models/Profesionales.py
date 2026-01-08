@@ -174,10 +174,10 @@ class Profesional:
             db_email, db_dni, db_matricula = fila
             
             if db_email == datos["email"]:
-                raise ValueError("El email ya está registrado")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")
             
             if db_dni == datos["dni"]:
-                raise ValueError("El DNI ya está registrado")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")
             
             if db_matricula == datos["matricula"]:
-                raise ValueError("La matrícula ya está registrada")
+                raise ValueError("No se pudo completar la operación. Verifique los datos ingresados.")
