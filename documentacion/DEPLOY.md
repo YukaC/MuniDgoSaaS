@@ -1,189 +1,56 @@
-# 🚀 Checklist de Deploy - TurnosApp
+# 🚀 Guía de Despliegue (Deploy)
 
-## Pre-Deploy
-
-### 1. Variables de Entorno ⚙️
-- [ ] `FLASK_ENV=production`
-- [ ] `SECRET_KEY` configurada con valor seguro (mínimo 32 caracteres)
-  ```bash
-  # Generar SECRET_KEY segura:
-  python -c "import secrets; print(secrets.token_hex(32))"
-  ```
-- [ ] Credenciales de BD configuradas (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
-- [ ] `CORS_ORIGINS` restringido a dominios permitidos
-- [ ] Variables de email configuradas (si aplica)
-
-### 2. Base de Datos 🗄️
-- [ ] BD de producción creada
-- [ ] Usuario de BD con permisos mínimos necesarios (SELECT, INSERT, UPDATE, DELETE)
-- [ ] Índices de optimización aplicados
-  ```sql
-  SOURCE INDICES_OPTIMIZACION.sql;
-  ```
-- [ ] Backup inicial creado
-- [ ] Cron job para backups automáticos configurado
-
-### 3. Servidor 🖥️
-- [ ] Python 3.9+ instalado
-- [ ] Entorno virtual creado
-- [ ] Dependencias instaladas: `pip install -r requirements.txt`
-- [ ] Servidor WSGI instalado (Gunicorn/uWSGI)
-- [ ] Proxy reverso configurado (Nginx/Apache)
-- [ ] Certificado SSL instalado (Let's Encrypt)
-- [ ] Firewall configurado (solo puertos 80, 443)
+Esta guía explica cómo desplegar la aplicación `TurnosApp` en servicios de nube. Recomendamos **Railway** por su facilidad de uso con Python y MySQL.
 
 ---
 
-## Deploy
+## Opción 1: Railway (Recomendado)
 
-### 4. Verificaciones Pre-Launch ✅
-```bash
-# Verificar que la app arranca
-FLASK_ENV=production python backend/main.py
+Railway detecta automáticamente el proyecto, instala las dependencias y provisiona la base de datos.
 
-# Verificar health check
-curl https://tu-dominio.com/health
-```
+### Pasos:
 
-### 5. Comandos de Deploy
-```bash
-# Con Gunicorn (recomendado)
-gunicorn -w 4 -b 127.0.0.1:5000 --access-logfile /var/log/turnosapp/access.log "api:create_app()"
+1.  **Crear cuenta**: Regístrate en [railway.app](https://railway.app/).
+2.  **Nuevo Proyecto**: Selecciona "Deploy from GitHub repo" y elige este repositorio.
+3.  **Agregar Base de Datos**:
+    *   En el dashboard del proyecto en Railway, clic derecho (o botón "New") -> **Database** -> **MySQL**.
+    *   Esto creará una instancia de MySQL y generará automáticamente las variables de entorno (`MYSQLUSER`, `MYSQLPASSWORD`, etc.).
+4.  **Configurar Variables de Entorno (Environment Variables)**:
+    *   Ve a la pestaña **Variables** de tu servicio de aplicación (el repositorio que conectaste).
+    *   Railway suele inyectar `DATABASE_URL` automáticamente. Sin embargo, nuestra app espera variables separadas.
+    *   Debes mapear las variables que te da Railway a las que usa la app, o editar `backend/api/db/db_config.py` para leer `DATABASE_URL` (pero lo más fácil es agregar las variables manualmente en Railway):
+        *   `DB_HOST`: `${MYSQLHOST}`
+        *   `DB_PORT`: `${MYSQLPORT}`
+        *   `DB_USER`: `${MYSQLUSER}`
+        *   `DB_PASSWORD`: `${MYSQLPASSWORD}`
+        *   `DB_NAME`: `${MYSQLDATABASE}`
+        *   `SECRET_KEY`: (Genera un string aleatorio seguro)
+5.  **Inicializar Base de Datos**:
+    *   Una vez desplegado, necesitas crear las tablas.
+    *   Railway tiene una pestaña **Data** (o puedes usar cualquier cliente MySQL conectándote con las credenciales públicas de Railway).
+    *   Ejecuta el contenido de `database/01_INSTALL.sql`.
 
-# Con systemd
-sudo systemctl start turnosapp
-sudo systemctl enable turnosapp
-```
-
----
-
-## Post-Deploy
-
-### 6. Verificación 🔍
-- [ ] Health check retorna `status: healthy`
-- [ ] Login de empresa funciona
-- [ ] Login de cliente funciona
-- [ ] Se puede crear un turno
-- [ ] Headers de seguridad presentes (verificar con curl -I)
-- [ ] HTTPS funcionando correctamente
-- [ ] Logs se están generando
-
-### 7. Monitoreo 📊
-- [ ] Configurar alertas de uptime (UptimeRobot, Pingdom)
-- [ ] Configurar logs centralizados (opcional)
-- [ ] Backup automático verificado
+### Nota sobre el Frontend
+El frontend se sirve como archivos estáticos desde la misma app Flask (si se configura así) o puedes desplegarlo por separado (ej. Vercel/Netlify) y apuntar la `API_URL`.
+*En esta configuración simple (Monolito), Flask puede servir el frontend si se configura la carpeta `static`.*
 
 ---
 
-## Ejemplo de Configuración Nginx
+## Opción 2: PythonAnywhere
 
-```nginx
-server {
-    listen 80;
-    server_name tu-dominio.com;
-    return 301 https://$server_name$request_uri;
-}
+Ideal si buscas un control más manual y un entorno 100% estándar de Python.
 
-server {
-    listen 443 ssl http2;
-    server_name tu-dominio.com;
-
-    ssl_certificate /etc/letsencrypt/live/tu-dominio.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/tu-dominio.com/privkey.pem;
-
-    # Seguridad SSL
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
-    ssl_prefer_server_ciphers off;
-
-    # Frontend estático
-    location / {
-        root /var/www/turnosApp/frontend;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API Backend
-    location /api {
-        rewrite ^/api(.*)$ $1 break;
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # O si el backend está en la raíz:
-    location ~ ^/(login|health|empresa|cliente|turno|servicio|profesional|disponibilidad|publico) {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
+1.  Crear cuenta en PythonAnywhere.
+2.  Subir el código (git clone).
+3.  Crear Virtualenv e instalar `requirements.txt`.
+4.  Configurar base de datos MySQL en la pestaña "Databases".
+5.  Configurar el archivo `.env` con las credenciales.
+6.  Apuntar el "WSGI configuration file" a nuestra app Flask.
 
 ---
 
-## Ejemplo de Servicio systemd
+## Archivos Importantes para Deploy
 
-```ini
-# /etc/systemd/system/turnosapp.service
-[Unit]
-Description=TurnosApp API
-After=network.target mysql.service
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/turnosApp/backend
-Environment="PATH=/var/www/turnosApp/.venv/bin"
-EnvironmentFile=/var/www/turnosApp/backend/.env
-ExecStart=/var/www/turnosApp/.venv/bin/gunicorn \
-    -w 4 \
-    -b 127.0.0.1:5000 \
-    --access-logfile /var/log/turnosapp/access.log \
-    --error-logfile /var/log/turnosapp/error.log \
-    "api:create_app()"
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Comandos para gestionar el servicio
-sudo systemctl daemon-reload
-sudo systemctl start turnosapp
-sudo systemctl enable turnosapp
-sudo systemctl status turnosapp
-```
-
----
-
-## Rollback
-
-En caso de problemas:
-
-```bash
-# Detener servicio
-sudo systemctl stop turnosapp
-
-# Restaurar código anterior
-cd /var/www/turnosApp
-git checkout <commit-anterior>
-
-# Restaurar BD si es necesario
-mysql -u root -p miturnoapp < backup_YYYYMMDD.sql
-
-# Reiniciar
-sudo systemctl start turnosapp
-```
-
----
-
-## Contacto de Emergencia
-
-En caso de caída crítica:
-1. Verificar logs: `tail -f /var/log/turnosapp/error.log`
-2. Verificar BD: `mysql -u root -p -e "SELECT 1"`
-3. Reiniciar servicio: `sudo systemctl restart turnosapp`
+-   **Procfile**: Indica el comando de inicio (`gunicorn`).
+-   **requirements.txt**: Lista de librerías necesarias.
+-   **runtime.txt** (Opcional): Para especificar versión de Python exacta (por defecto Railway usa la última estable).
