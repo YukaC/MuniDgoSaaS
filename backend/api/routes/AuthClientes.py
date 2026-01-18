@@ -74,57 +74,6 @@ def login_cliente():
         return jsonify({"message": f"Error al autenticar: {str(e)}"}), 500
 
 
-# ---------------------- OBTENER PERFIL DE CLIENTE ----------------------
-@app.route('/cliente/perfil', methods=['GET'])
-def obtener_perfil_cliente():
-    """Endpoint protegido para obtener el perfil del cliente autenticado"""
-    from api.utils.seguridad_clientes import requiere_token_cliente
-    
-    @requiere_token_cliente
-    def _obtener_perfil():
-        try:
-            cliente_id = request.cliente_id
-            cliente = Cliente.get_cliente_by_id(cliente_id)
-            
-            if not cliente:
-                return jsonify({"message": "Cliente no encontrado"}), 404
-            
-            return jsonify(cliente), 200
-        except Exception as e:
-            return jsonify({"message": str(e)}), 500
-    
-    return _obtener_perfil()
-
-
-# ---------------------- ACTUALIZAR PERFIL DE CLIENTE ----------------------
-@app.route('/cliente/perfil', methods=['PUT'])
-def actualizar_perfil_cliente():
-    """Endpoint protegido para actualizar el perfil del cliente autenticado"""
-    from api.utils.seguridad_clientes import requiere_token_cliente
-    
-    @requiere_token_cliente
-    def _actualizar_perfil():
-        datos = request.get_json()
-        
-        if not datos:
-            return jsonify({"message": "Se requiere un cuerpo JSON"}), 400
-
-        try:
-            cliente_id = request.cliente_id
-            
-            # No permitir cambiar el DNI (es el identificador único)
-            if "dni" in datos:
-                del datos["dni"]
-            
-            cliente_actualizado = Cliente.update_cliente(cliente_id, datos)
-            return jsonify({
-                "message": "Perfil actualizado exitosamente",
-                "cliente": cliente_actualizado
-            }), 200
-        except ValueError as e:
-            return jsonify({"message": str(e)}), 400
-        except Exception as e:
-            return jsonify({"message": str(e)}), 500
-    
-    return _actualizar_perfil()
-
+# ---------------------- NOTA ----------------------
+# Los endpoints /cliente/perfil (GET y PUT/PATCH) están definidos en Clientes.py
+# No duplicar aquí para evitar conflictos de rutas

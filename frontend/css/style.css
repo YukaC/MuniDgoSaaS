@@ -277,6 +277,39 @@ label {
     font-weight: bold;
     color: var(--white);
     letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* Logo del municipio - Optimizado */
+.logo-muni {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: var(--white);
+    padding: 1px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.logo-text {
+    text-align: left;
+}
+
+.logo-text h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    line-height: 1.2;
+}
+
+.logo-text p {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    opacity: 0.9;
+    font-weight: normal;
 }
 
 .sidebar a {
@@ -1022,15 +1055,42 @@ tr:hover {
 }
 
 .login-container h1 {
-    margin-bottom: 25px;
-    font-size: 1.5rem;
+    margin-bottom: 5px;
+    font-size: 1.8rem;
     color: var(--dark);
+}
+
+.login-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.login-subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .footer-text {
     margin-top: 20px;
     font-size: 0.9rem;
     color: #666;
+}
+
+.login-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.9);
 }
 
 /* ==================== CLIENTE PAGE ==================== */
@@ -1060,6 +1120,27 @@ tr:hover {
 .cliente-header p {
     color: rgba(255, 255, 255, 0.9);
     font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Header con logo para cliente */
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.header-text {
+    text-align: left;
+}
+
+.header-text h1 {
+    margin: 0;
+}
+
+.header-text p {
+    margin: 0.25rem 0 0;
 }
 
 .cliente-main {
