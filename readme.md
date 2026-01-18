@@ -4,6 +4,29 @@ Bienvenido al sistema de gestión de turnos. Esta aplicación permite administra
 
 ---
 
+## 📸 Galería del Proyecto
+
+El sistema cuenta con dos módulos principales: **Panel Administrativo** (para gestión interna) y **Portal del Ciudadano** (para reserva de turnos).
+
+### 📊 Panel de Administración
+| Dashboard General | Reportes y Métricas |
+|:---:|:---:|
+| <img src="./screenshots/dashboardAdmin.png" width="100%"> | <img src="./screenshots/reportesAdmin.png" width="100%"> |
+| *Vista general de actividad diaria* | *Análisis de ocupación y servicios* |
+
+| Gestión de Citas | Administración de Profesionales |
+|:---:|:---:|
+| <img src="./screenshots/citasAdmin.png" width="100%"> | <img src="./screenshots/profesionalesAdmin.png" width="100%"> |
+| *Control de estados y asignaciones* | *Gestión de equipo médico* |
+
+### 👤 Portal del Ciudadano
+| Reserva de Turno | Perfil del Usuario |
+|:---:|:---:|
+| <img src="./screenshots/reservaturnoCliente.png" width="100%"> | <img src="./screenshots/perfilCliente.png" width="100%"> |
+| *Interfaz de auto-gestión de citas* | *Historial de turnos del paciente* |
+
+---
+
 ## 🚀 Guía Rápida de Instalación y Despliegue
 
 Estos son los pasos para poner en marcha el proyecto en tu máquina local.
@@ -81,10 +104,21 @@ La documentación detallada se encuentra en la carpeta `documentacion/`:
 
 ## 🛠️ Tecnologías
 
-- **Backend**: Python (Flask)
-- **Base de Datos**: MySQL
-- **Frontend**: HTML5, CSS3 (Vanilla), JavaScript (ES6+), ECharts
-- **Autenticación**: JWT (JSON Web Tokens)
+<div align="left">
+
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
+  <img src="https://img.shields.io/badge/Apache%20ECharts-AA344D?style=for-the-badge&logo=apache-echarts&logoColor=white" />
+  
+  <br/>
+  
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white" />
+  <img src="https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens" />
+
+</div>
 
 ---
 
