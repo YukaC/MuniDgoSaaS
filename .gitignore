@@ -87,3 +87,4 @@ dist/
 .gemini/
 .agent/
 tmp/
+.codegraph/
