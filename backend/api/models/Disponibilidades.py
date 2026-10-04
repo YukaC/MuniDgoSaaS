@@ -55,9 +55,11 @@ class Disponibilidad:
         return Disponibilidad(fila).to_json() if fila else None
 
     @classmethod
-    def get_disponibilidades(cls):
+    def get_disponibilidades(cls, limit=500, offset=0):
+        limit = min(int(limit), 500) if limit else 500
+        offset = max(int(offset), 0) if offset else 0
         with get_db_cursor() as cursor:
-            cursor.execute("SELECT * FROM disponibilidades")
+            cursor.execute("SELECT * FROM disponibilidades ORDER BY id ASC LIMIT %s OFFSET %s", (limit, offset))
             filas = cursor.fetchall()
         return [Disponibilidad(fila).to_json() for fila in filas] if filas else []
     

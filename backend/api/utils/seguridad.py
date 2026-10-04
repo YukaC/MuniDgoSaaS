@@ -56,6 +56,8 @@ def requiere_token(func):
         return func(*args, **kwargs)
     return decorador
 
+ALLOWED_TABLES = {"clientes", "profesionales", "servicios", "turnos", "disponibilidades", "empresas"}
+
 def misma_empresa(tabla):
     """
     Decorador para validar que el recurso (id) pertenezca a la empresa del header.
@@ -66,6 +68,9 @@ def misma_empresa(tabla):
         @wraps(func)
         def wrapper(*args, **kwargs):
             logger.debug(f"misma_empresa({tabla}): kwargs={kwargs}")
+
+            if tabla not in ALLOWED_TABLES:
+                return jsonify({"message": "Nombre de tabla inválido"}), 400
 
             # Intenta obtener el id_empresa desde los argumentos de la ruta
             id_empresa = None
@@ -157,6 +162,9 @@ def validar_referencias(mapa_referencias):
                             # Si es None o 0, lo saltamos
                             if not valor_id: 
                                 continue
+
+                            if tabla_bd not in ALLOWED_TABLES:
+                                return jsonify({"message": f"Nombre de tabla {tabla_bd} inválido"}), 400
 
                             # Validamos contra la BD: ¿Este ID foráneo es de mi empresa?
                             query = f"SELECT 1 FROM {tabla_bd} WHERE id = %s AND empresa_id = %s"
