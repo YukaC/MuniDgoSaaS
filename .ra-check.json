@@ -1,5 +1,14 @@
 {
   "mode": "warn",
+  "rules": {
+    "stateless-app": "block",
+    "http-timeout": "block",
+    "db-pool": "block",
+    "structured-logs": "block",
+    "hardcoded-secrets": "block",
+    "no-orchestrator": "block",
+    "migration-reversible": "block"
+  },
   "allow": {
     "disk_paths": ["data/", "tmp/", "storage/", "uploads/", "cache/"],
     "endpoints": ["/api/health", "/healthz", "/health", "/api/healthz", "/readyz"],
