@@ -22,8 +22,13 @@ from api.utils.sanitizer import sanitize_string, sanitize_observaciones
 @requiere_token
 def obtener_turnos():
     try:
-        turnos = Turno.get_turnos()
-        return jsonify(turnos), 200
+        limit = request.args.get('limit', 500, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        turnos = Turno.get_turnos(limit=limit, offset=offset)
+        response = jsonify(turnos)
+        response.headers['X-Total-Count'] = str(len(turnos))
+        response.headers['X-Truncated'] = 'true' if len(turnos) >= limit else 'false'
+        return response, 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 
@@ -33,8 +38,13 @@ def obtener_turnos():
 @requiere_token
 def obtener_turnos_por_empresa(id_empresa):
     try:
+        limit = request.args.get('limit', 500, type=int)
+        offset = request.args.get('offset', 0, type=int)
         turnos = Turno.get_turnos_by_idempresa(id_empresa)
-        return jsonify(turnos), 200
+        response = jsonify(turnos)
+        response.headers['X-Total-Count'] = str(len(turnos))
+        response.headers['X-Truncated'] = 'true' if len(turnos) >= limit else 'false'
+        return response, 200
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 
