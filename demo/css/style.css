@@ -1499,3 +1499,18 @@ tr:hover {
         display: none;
     }
 }
+/* Demo hint — credenciales precargadas para que la demo se use con un solo click. */
+.demo-hint {
+    margin-top: 0.85rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: #5b6472;
+    text-align: center;
+}
+
+.demo-hint code {
+    background: #eef2f7;
+    border-radius: 4px;
+    padding: 0.05rem 0.3rem;
+    font-size: 0.78rem;
+}
