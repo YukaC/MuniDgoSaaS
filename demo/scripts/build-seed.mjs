@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 const DEMO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = resolve(DEMO_ROOT, "..");
 const DEFAULT_SQL = resolve(REPO_ROOT, "database", "02_SEED_MUNI.sql");
-const DEFAULT_OUT = resolve(DEMO_ROOT, "js", "seed.json");
+const DEFAULT_OUT = resolve(DEMO_ROOT, "assets", "js", "seed.json");
 
 const TABLES = [
   "empresas",
