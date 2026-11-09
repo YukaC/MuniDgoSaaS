@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Mi Turno</title>
+    <link rel="icon" type="image/png" href="assets/img/logo-muni.png">
+    <!-- Importamos el CSS unificado -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/demo.css">
+</head>
+
+<body class="login-page">
+
+    <div class="login-container">
+        <img src="assets/img/logo-muni.png" alt="Logo Municipalidad de Coronel Dorrego" class="login-logo">
+        <h1>Mi Turno</h1>
+        <p class="login-subtitle">Panel Administrativo</p>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="user">Nombre de usuario:</label>
+                <input type="text" id="user" name="user" placeholder="Ej: admin_clinica" required
+                    autocomplete="username" value="hospital_muni">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required
+                    autocomplete="current-password" value="123456">
+            </div>
+
+            <button type="submit" class="btn-primary" id="btnLogin">Ingresar</button>
+
+            <p class="demo-hint" role="note">Demo: credenciales precargadas — sector Hospital
+                (<code>hospital_muni</code>). Sólo tenés que tocar Ingresar. Cada sector es un tenant
+                separado: probá también <code>vialidad_muni</code>, <code>admin_muni</code> o
+                <code>registro_civil</code> (misma contraseña).</p>
+        </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="login-footer">
+        <p>&copy;
+            <script>document.write(new Date().getFullYear())</script> Mi Turno - Municipalidad de Coronel Dorrego. Todos
+            los derechos reservados.
+        </p>
+    </footer>
+
+    <!-- Scripts necesarios -->
+    <!-- Demo estatica: intercepta fetch antes de config.js -->
+    <script src="assets/js/mock-api.js"></script>
+    <script src="assets/js/demo-bar.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/login.js"></script>
+</body>
+
+</html>

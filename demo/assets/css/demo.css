@@ -1,0 +1,216 @@
+/* ==========================================================================
+   Demo chrome: barra de rol + recorrido guiado (sólo existe en demo/).
+   ========================================================================== */
+
+:root {
+    --demo-bar-h: 46px;
+    --demo-ciudadano: #0b7a5c;
+    --demo-ciudadano-soft: #e6f4ef;
+    --demo-municipio: #1f2a44;
+    --demo-municipio-soft: #e8ecf5;
+    --demo-accent: #ffb020;
+}
+
+body.has-demo-bar {
+    padding-top: var(--demo-bar-h);
+}
+
+body.has-demo-bar .topbar {
+    top: var(--demo-bar-h);
+}
+
+.demo-bar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--demo-bar-h);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    font: 500 14px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+    background: #2b3340;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.demo-bar[data-role="ciudadano"] { background: var(--demo-ciudadano); }
+.demo-bar[data-role="municipio"] { background: var(--demo-municipio); }
+
+.demo-bar__tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.demo-bar__home {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.demo-bar__role {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.demo-bar__role strong { font-weight: 700; }
+
+.demo-bar__spacer { flex: 1; }
+
+.demo-bar__btn {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: transparent;
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 11px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.demo-bar__btn:hover,
+.demo-bar__btn:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+}
+
+.demo-bar__btn--solid {
+    background: #fff;
+    border-color: #fff;
+    color: #1f2a44;
+    font-weight: 700;
+}
+
+.demo-bar__btn--solid:hover,
+.demo-bar__btn--solid:focus-visible {
+    background: #f1f3f7;
+}
+
+.demo-bar__btn--chip {
+    background: var(--demo-accent);
+    border-color: var(--demo-accent);
+    color: #1d1d1d;
+    font-weight: 700;
+}
+
+/* ---------- Recorrido guiado ---------- */
+
+.demo-tour {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 2001;
+    width: min(360px, calc(100vw - 32px));
+    background: #fff;
+    color: #222;
+    border-radius: 12px;
+    border-top: 5px solid var(--demo-accent);
+    box-shadow: 0 14px 40px rgba(16, 24, 40, 0.25);
+    padding: 16px 18px 14px;
+    font: 400 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.demo-tour__step {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a5a00;
+    margin-bottom: 4px;
+}
+
+.demo-tour h3 {
+    font-size: 16px;
+    margin: 0 0 6px;
+    color: #111;
+}
+
+.demo-tour p { margin: 0 0 8px; }
+
+.demo-tour ol {
+    margin: 0 0 10px 18px;
+    padding: 0;
+}
+
+.demo-tour__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.demo-tour__actions .demo-bar__btn {
+    color: #1f2a44;
+    border-color: #c9cfdb;
+}
+
+.demo-tour__actions .demo-bar__btn--solid {
+    background: #1f2a44;
+    border-color: #1f2a44;
+    color: #fff;
+}
+
+.demo-tour__actions .demo-bar__btn--solid.is-ciudadano {
+    background: var(--demo-ciudadano);
+    border-color: var(--demo-ciudadano);
+}
+
+.demo-tour__close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: 0;
+    background: none;
+    font-size: 18px;
+    line-height: 1;
+    color: #777;
+    cursor: pointer;
+}
+
+/* Turno recién reservado desde el portal, resaltado en el panel. */
+.demo-highlight {
+    position: relative;
+    outline: 3px solid var(--demo-accent);
+    outline-offset: 3px;
+    animation: demo-pulse 1.4s ease-out 3;
+}
+
+.demo-highlight__badge {
+    display: block;
+    background: var(--demo-accent);
+    color: #1d1d1d;
+    font: 700 12px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-align: center;
+    padding: 7px 10px;
+}
+
+@keyframes demo-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0.7); }
+    100% { box-shadow: 0 0 0 18px rgba(255, 176, 32, 0); }
+}
+
+@media (max-width: 768px) {
+    body.has-demo-bar .sidebar {
+        top: var(--demo-bar-h);
+        height: calc(100vh - var(--demo-bar-h));
+    }
+}
+
+@media (max-width: 760px) {
+    .demo-bar { gap: 8px; padding: 0 10px; }
+    .demo-bar__tag,
+    .demo-bar__role .demo-bar__long,
+    .demo-bar__btn--reset { display: none; }
+    .demo-tour { bottom: 12px; right: 12px; }
+}

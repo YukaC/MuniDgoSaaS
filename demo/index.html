@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Turno — Demo del sistema de turnos municipal</title>
+    <meta name="description"
+        content="Demo de Mi Turno: portal del ciudadano y panel de gestión del municipio sobre los mismos datos.">
+    <link rel="icon" type="image/png" href="assets/img/logo-muni.png">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/demo.css">
+    <style>
+        .home {
+            min-height: 100vh;
+            background: linear-gradient(160deg, #f5f7fa 0%, #dfe6f0 100%);
+            color: #1d2433;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .home__wrap {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 48px 24px 32px;
+        }
+
+        .home__hero {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 14px;
+        }
+
+        .home__hero img {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        }
+
+        .home__hero h1 {
+            font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        .home__hero p {
+            margin: 4px 0 0;
+            color: #5b6472;
+        }
+
+        .home__lead {
+            font-size: 1.15rem;
+            line-height: 1.5;
+            max-width: 720px;
+            margin: 18px 0 26px;
+        }
+
+        .home__lead strong {
+            color: #111;
+        }
+
+        .home__tour {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px 18px;
+            background: #fff;
+            border-left: 6px solid var(--demo-accent);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+            margin-bottom: 26px;
+        }
+
+        .home__tour p {
+            flex: 1 1 320px;
+            margin: 0;
+            line-height: 1.45;
+        }
+
+        .home__btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 0;
+            border-radius: 8px;
+            padding: 12px 18px;
+            font: 700 15px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            color: #fff;
+            background: #1f2a44;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .home__btn:hover,
+        .home__btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+            outline: none;
+        }
+
+        .home__btn--tour {
+            background: var(--demo-accent);
+            color: #1d1d1d;
+        }
+
+        .home__roles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 22px;
+            align-items: stretch;
+        }
+
+        .role-card {
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+        }
+
+        .role-card__head {
+            padding: 20px 22px 16px;
+            color: #fff;
+        }
+
+        .role-card--ciudadano .role-card__head {
+            background: var(--demo-ciudadano);
+        }
+
+        .role-card--municipio .role-card__head {
+            background: var(--demo-municipio);
+        }
+
+        .role-card__kicker {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+
+        .role-card__head h2 {
+            font-size: 1.45rem;
+            margin: 6px 0 2px;
+            color: #fff;
+        }
+
+        .role-card__head p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .role-card__body {
+            padding: 18px 22px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .role-card ul {
+            margin: 0;
+            padding-left: 20px;
+            list-style: disc;
+            line-height: 1.6;
+        }
+
+        .role-card__login {
+            font-size: 0.85rem;
+            color: #5b6472;
+            margin: 0;
+        }
+
+        .role-card__login code {
+            background: #eef2f7;
+            border-radius: 4px;
+            padding: 1px 5px;
+        }
+
+        .role-card__cta {
+            margin-top: auto;
+        }
+
+        .role-card--ciudadano .home__btn {
+            background: var(--demo-ciudadano);
+        }
+
+        .home__arch {
+            margin-top: 30px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 20px 22px;
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+        }
+
+        .home__arch h3 {
+            margin: 0 0 14px;
+            font-size: 1.05rem;
+        }
+
+        .arch {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .arch__node {
+            border: 1px solid #d5dbe6;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            background: #fafbfd;
+        }
+
+        .arch__node strong {
+            display: block;
+        }
+
+        .arch__node small {
+            color: #5b6472;
+        }
+
+        .arch__node--ciudadano {
+            border-color: var(--demo-ciudadano);
+            background: var(--demo-ciudadano-soft);
+        }
+
+        .arch__node--municipio {
+            border-color: var(--demo-municipio);
+            background: var(--demo-municipio-soft);
+        }
+
+        .arch__stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .arch__arrow {
+            color: #8a93a3;
+            font-size: 1.2rem;
+        }
+
+        .home__arch-note {
+            margin: 14px 0 0;
+            font-size: 0.88rem;
+            color: #5b6472;
+            line-height: 1.5;
+        }
+
+        .home__foot {
+            margin-top: 26px;
+            font-size: 0.85rem;
+            color: #5b6472;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+        }
+
+        .home__foot a {
+            color: inherit;
+        }
+    </style>
+</head>
+
+<body class="home">
+    <main class="home__wrap">
+        <header class="home__hero">
+            <img src="assets/img/logo-muni.png" alt="Logo Municipalidad de Coronel Dorrego" width="72" height="72">
+            <div>
+                <h1>Mi Turno</h1>
+                <p>Sistema de turnos · Municipalidad de Coronel Dorrego</p>
+            </div>
+        </header>
+
+        <p class="home__lead">
+            <strong>Una plataforma, dos roles.</strong> El vecino reserva su turno desde el portal público y
+            cada sector del municipio lo gestiona desde su panel. Los dos lados trabajan
+            <strong>sobre los mismos datos</strong>: lo que hace uno, lo ve el otro.
+        </p>
+
+        <section class="home__tour" aria-label="Recorrido guiado">
+            <p><strong>Recorrido guiado (1 minuto):</strong> reservá un turno como ciudadano y, con un clic,
+                miralo aparecer en la agenda del Hospital Municipal.</p>
+            <button type="button" class="home__btn home__btn--tour" onclick="turnosDemoStartTour()">▶ Empezar
+                recorrido</button>
+        </section>
+
+        <section class="home__roles" aria-label="Elegí un rol">
+            <article class="role-card role-card--ciudadano">
+                <div class="role-card__head">
+                    <div class="role-card__kicker">Rol 1 · Público</div>
+                    <h2>Portal del ciudadano</h2>
+                    <p>Autogestión de turnos para vecinos.</p>
+                </div>
+                <div class="role-card__body">
+                    <ul>
+                        <li>Registro e inicio de sesión con DNI</li>
+                        <li>Reserva por sector, profesional, día y horario libre</li>
+                        <li>Mis turnos: modificar o cancelar</li>
+                        <li>Perfil del ciudadano</li>
+                    </ul>
+                    <p class="role-card__login">Entrás como <strong>Juan Perez</strong> (DNI <code>12345678</code>,
+                        clave <code>123456</code>). Ya está precargado.</p>
+                    <a class="home__btn role-card__cta" href="cliente.html">Entrar como ciudadano →</a>
+                </div>
+            </article>
+
+            <article class="role-card role-card--municipio">
+                <div class="role-card__head">
+                    <div class="role-card__kicker">Rol 2 · Interno</div>
+                    <h2>Panel del municipio</h2>
+                    <p>Gestión por sector (multi-tenant).</p>
+                </div>
+                <div class="role-card__body">
+                    <ul>
+                        <li>Dashboard del día y reportes con gráficos</li>
+                        <li>Agenda de citas: alta, edición, estados</li>
+                        <li>Profesionales, disponibilidades, servicios y clientes</li>
+                        <li>4 sectores aislados: Hospital, Vialidad, Administración, Registro Civil</li>
+                    </ul>
+                    <p class="role-card__login">Entrás como <strong>Hospital Municipal</strong>
+                        (<code>hospital_muni</code> / <code>123456</code>). Ya está precargado.</p>
+                    <a class="home__btn role-card__cta" href="login.html">Entrar como municipio →</a>
+                </div>
+            </article>
+        </section>
+
+        <section class="home__arch" aria-label="Arquitectura">
+            <h3>Cómo está armado</h3>
+            <div class="arch">
+                <div class="arch__stack">
+                    <div class="arch__node arch__node--ciudadano"><strong>Portal ciudadano</strong><small>JWT de
+                            cliente</small></div>
+                    <div class="arch__node arch__node--municipio"><strong>Panel del sector</strong><small>JWT +
+                            header <code>id-empresa</code></small></div>
+                </div>
+                <span class="arch__arrow" aria-hidden="true">→</span>
+                <div class="arch__node"><strong>API REST · Flask</strong><small>auth, rate limiting, cálculo de
+                        horarios libres</small></div>
+                <span class="arch__arrow" aria-hidden="true">→</span>
+                <div class="arch__node"><strong>MySQL</strong><small>un esquema, datos separados por
+                        sector</small></div>
+            </div>
+            <p class="home__arch-note">
+                Frontend en HTML, CSS y JavaScript sin frameworks, con gráficos de Apache ECharts. En esta demo
+                pública la API corre simulada en el navegador (<code>js/mock-api.js</code>) a partir del seed SQL
+                real, y los cambios se guardan en tu navegador. El código de la aplicación es el mismo.
+            </p>
+        </section>
+
+        <footer class="home__foot">
+            <span>&copy; <script>document.write(new Date().getFullYear())</script> Mi Turno — Municipalidad de
+                Coronel Dorrego</span>
+            <a href="https://github.com/YukaC/MuniDgoSaaS" target="_blank" rel="noopener">Código en GitHub</a>
+        </footer>
+    </main>
+
+    <script src="assets/js/mock-api.js"></script>
+    <script src="assets/js/demo-bar.js"></script>
+</body>
+
+</html>

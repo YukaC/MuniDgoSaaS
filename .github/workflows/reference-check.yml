@@ -24,8 +24,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "No installation step required"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest-mock
 
       - name: Run project check
         run: |
-          bash .ra/checks/ra-checks .
+          python3 -m pytest backend/tests/ && bash .ra/checks/ra-checks .
+

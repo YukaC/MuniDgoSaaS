@@ -45,7 +45,7 @@ function renderizarTablaProfesionales(lista) {
     
     card.innerHTML = `
       <div class="item-card-header">
-        <h3>👨‍⚕️ ${p.name} ${p.surname}</h3>
+        <h3>${p.name} ${p.surname}</h3>
         <span class="badge-especialidad">${p.especialidad || "Consulta General"}</span>
       </div>
       <div class="item-card-body">
@@ -63,8 +63,8 @@ function renderizarTablaProfesionales(lista) {
         </div>
       </div>
       <div class="item-card-footer">
-        <button class="btn-primary btn-sm" onclick="editarProfesional(${p.id})">✏️ Editar</button>
-        <button class="btn-danger btn-sm" onclick="eliminarProfesional(${p.id})">🗑️ Eliminar</button>
+        <button class="btn-primary btn-sm" onclick="editarProfesional(${p.id})">Editar</button>
+        <button class="btn-danger btn-sm" onclick="eliminarProfesional(${p.id})">Eliminar</button>
       </div>
     `;
     

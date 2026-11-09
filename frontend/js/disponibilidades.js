@@ -81,7 +81,7 @@ function renderizarTablaPrincipal(disponibilidades) {
       (d) => d.profesional_id == prof.id
     );
 
-    let resumenHTML = '<span style="color:#999; font-style:italic;">Sin horarios asignados</span>';
+    let resumenHTML = '<span style="color: var(--muted); font-style:italic;">Sin horarios asignados</span>';
 
     if (susHorarios.length > 0) {
       susHorarios.sort(
@@ -103,7 +103,7 @@ function renderizarTablaPrincipal(disponibilidades) {
     
     card.innerHTML = `
       <div class="item-card-header">
-        <h3>⏰ ${prof.name} ${prof.surname}</h3>
+        <h3>${prof.name} ${prof.surname}</h3>
         <span class="badge-especialidad">${prof.especialidad || "General"}</span>
       </div>
       <div class="item-card-body">
@@ -112,7 +112,7 @@ function renderizarTablaPrincipal(disponibilidades) {
         </div>
       </div>
       <div class="item-card-footer">
-        <button class="btn-primary btn-sm" onclick="gestionarHorarios(${prof.id})">⚙️ Gestionar Horarios</button>
+        <button class="btn-primary btn-sm" onclick="gestionarHorarios(${prof.id})">Gestionar Horarios</button>
       </div>
     `;
     
@@ -162,7 +162,7 @@ async function actualizarListaModal(profId) {
 
     if (!Array.isArray(horarios) || horarios.length === 0) {
       container.innerHTML =
-        '<p style="padding:10px; color:#777; text-align:center;">No tiene horarios cargados.</p>';
+        '<p style="padding:10px; color: var(--muted); text-align:center;">No tiene horarios cargados.</p>';
       return;
     }
 
@@ -191,7 +191,7 @@ async function actualizarListaModal(profId) {
                     <td style="padding:8px; font-size:0.9em;">${dia}</td>
                     <td style="padding:8px; font-size:0.9em;">${inicio} - ${fin}</td>
                     <td style="padding:8px; text-align:right;">
-                        <button type="button" class="btn-sm btn-danger" onclick="eliminarDisponibilidad(${h.id})">🗑️</button>
+                        <button type="button" class="btn-sm btn-danger" onclick="eliminarDisponibilidad(${h.id})">Quitar</button>
                     </td>
                 </tr>`;
     });
