@@ -715,3 +715,69 @@ function nextWeekdayDate(targetDay) {
     day.getDate()
   ).padStart(2, "0")}`;
 }
+
+// ------------------------------------------------------------ demo chrome
+
+function sqlDay(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function dayDiff(fromSql, toSql) {
+  const from = new Date(`${fromSql.slice(0, 10)}T00:00:00`);
+  const to = new Date(`${toSql.slice(0, 10)}T00:00:00`);
+  return Math.round((to - from) / 86400000);
+}
+
+test("seed dates roll forward so upcoming turnos never go stale", async () => {
+  const storage = new Map();
+  const env = createDemo({ storage });
+  const { json: session } = await adminLogin(env);
+  const turnos = await call(env.fetch, "/empresa/1/turnos", { headers: adminHeaders(session.token) });
+
+  const today = sqlDay(new Date());
+  const expectedShift = Math.max(0, dayDiff(SEED.generatedAt, today));
+  for (const turno of turnos.json) {
+    const original = SEED.turnos.find((t) => t.id === turno.id);
+    assert.equal(dayDiff(original.start_datetime, turno.start_datetime), expectedShift);
+    assert.equal(turno.start_datetime.slice(11), original.start_datetime.slice(11), "time of day kept");
+  }
+  assert.ok(
+    turnos.json.some((t) => t.status === "Reservado" && new Date(t.start_datetime.replace(" ", "T")) > new Date()),
+    "there is at least one upcoming reserved turno"
+  );
+
+  // A state saved on an older day is moved forward again on the next load.
+  const state = JSON.parse(storage.get(`${STORAGE_PREFIX}state`));
+  const before = state.turnos[0].start_datetime;
+  const old = new Date();
+  old.setDate(old.getDate() - 3);
+  state.anchorDate = sqlDay(old);
+  storage.set(`${STORAGE_PREFIX}state`, JSON.stringify(state));
+
+  const reloaded = createDemo({ storage });
+  await adminLogin(reloaded);
+  const after = JSON.parse(storage.get(`${STORAGE_PREFIX}state`));
+  assert.equal(dayDiff(before, after.turnos[0].start_datetime), 3);
+  assert.equal(after.anchorDate, today);
+});
+
+test("a citizen booking is recorded for the demo bar", async () => {
+  const storage = new Map();
+  const env = createDemo({ storage });
+  const { json: session } = await clientLogin(env);
+  const { slot } = await firstAvailableSlot(env, session.token, 1, 1);
+  const reserva = await call(
+    env.fetch,
+    "/cliente/empresa/1/reservar-turno",
+    jsonBody({ profesional_id: 1, start_datetime: slot.datetime }, clientHeaders(session.token))
+  );
+  assert.equal(reserva.status, 201);
+
+  const booking = JSON.parse(storage.get(`${STORAGE_PREFIX}last-booking`));
+  assert.equal(booking.id, reserva.json.id);
+  assert.equal(booking.empresa_id, 1);
+  assert.equal(booking.empresa_username, "hospital_muni");
+  assert.equal(booking.cliente_name, "Juan Perez");
+  assert.equal(booking.start_datetime, slot.datetime);
+});

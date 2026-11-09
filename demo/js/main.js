@@ -31,7 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnLogout = document.getElementById("logout");
   if (btnLogout) {
     btnLogout.addEventListener("click", () => {
-      localStorage.clear();
+      // Demo: sólo se cierra la sesión del sector. El original hacía
+      // localStorage.clear(), que además borraba los turnos de la demo.
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("activeUser");
       window.location.href = "login.html";
     });
   }

@@ -2,7 +2,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   if (localStorage.getItem("authToken") && localStorage.getItem("activeUser")) {
-    window.location.href = "index.html";
+    window.location.href = "admin.html";
   }
 
   const loginForm = document.getElementById("login-form");
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("activeUser", JSON.stringify(sessionData));
           localStorage.setItem("authToken", data.token);
 
-          window.location.href = "index.html";
+          window.location.href = "admin.html";
         } else {
           alert(data.message || "Credenciales incorrectas");
         }

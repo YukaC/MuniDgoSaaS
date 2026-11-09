@@ -98,6 +98,7 @@
     if (stored) {
       try {
         db = JSON.parse(stored);
+        if (rollDatesForward(db)) persist();
         return;
       } catch (error) {
         console.warn("[mock-api] stored demo state is corrupt, rebuilding from seed", error);
@@ -122,8 +123,65 @@
         activo: cliente.activo !== false,
       })),
       turnos: seed.turnos,
+      // Day the dates below are relative to (see rollDatesForward).
+      anchorDate: String(seed.generatedAt || "").slice(0, 10) || todaySql(),
     };
+    rollDatesForward(db);
     persist();
+  }
+
+  /**
+   * The seed SQL builds turnos with NOW() +/- INTERVAL, but seed.json freezes them
+   * on the day it was generated, so after a few days every "upcoming" turno is in
+   * the past. This moves every turno date forward by the days elapsed since
+   * `db.anchorDate`, so the demo always looks like it did on generation day:
+   * completed turnos a few days ago, reserved ones in the next few days.
+   * Returns true when something changed.
+   */
+  function rollDatesForward(state) {
+    const today = todaySql();
+    if (!state.anchorDate) state.anchorDate = today;
+    const days = daysBetween(state.anchorDate, today);
+    if (days <= 0) return false;
+
+    for (const turno of state.turnos || []) {
+      for (const field of ["start_datetime", "end_datetime", "created_at"]) {
+        const date = parseSqlDateTime(turno[field]);
+        if (!date) continue;
+        date.setDate(date.getDate() + days);
+        turno[field] = formatSqlDateTime(date);
+      }
+    }
+    state.anchorDate = today;
+    return true;
+  }
+
+  function todaySql() {
+    return nowSql().slice(0, 10);
+  }
+
+  function daysBetween(fromDay, toDay) {
+    const from = parseSqlDateTime(`${fromDay} 00:00:00`);
+    const to = parseSqlDateTime(`${toDay} 00:00:00`);
+    if (!from || !to) return 0;
+    return Math.round((to - from) / 86400000);
+  }
+
+  /** Lets the demo UI (js/demo-bar.js) point at the turno a citizen just booked. */
+  function rememberBooking(turno) {
+    const empresa = (db.empresas || []).find((e) => Number(e.id) === Number(turno.empresa_id));
+    const booking = {
+      id: turno.id,
+      empresa_id: turno.empresa_id,
+      empresa_nombre: empresa ? empresa.nombre : "",
+      empresa_username: empresa ? empresa.username : "",
+      cliente_name: turno.cliente_name,
+      start_datetime: turno.start_datetime,
+    };
+    localStorage.setItem(`${STORAGE_PREFIX}last-booking`, JSON.stringify(booking));
+    if (typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {
+      window.dispatchEvent(new CustomEvent("turnos-demo:booking", { detail: booking }));
+    }
   }
 
   function persist() {
@@ -131,9 +189,16 @@
   }
 
   /** Restores the initial seed data (used by the README instructions). */
-  window.turnosDemoReset = function turnosDemoReset() {
-    localStorage.removeItem(STATE_KEY);
-    window.location.reload();
+  window.turnosDemoReset = function turnosDemoReset(redirectTo) {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(STORAGE_PREFIX))
+      .forEach((key) => localStorage.removeItem(key));
+    // Sessions too: both roles start logged out on top of the fresh seed.
+    ["authToken", "activeUser", "clienteToken", "clienteData"].forEach((key) =>
+      localStorage.removeItem(key)
+    );
+    if (redirectTo) window.location.href = redirectTo;
+    else window.location.reload();
   };
 
   // ============================================================ fetch plumbing
@@ -1412,6 +1477,7 @@
     };
     db.turnos.push(turno);
     persist();
+    rememberBooking(turno);
     return ok(turnoRow(turno), 201);
   }
 
