@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEMO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SEED_PATH = join(DEMO_ROOT, "js", "seed.json");
+const SEED_PATH = join(DEMO_ROOT, "assets", "js", "seed.json");
 
 function loadSeed() {
   if (!existsSync(SEED_PATH)) {
@@ -72,7 +72,7 @@ function createDemo({ storage = new Map() } = {}) {
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(readFileSync(join(DEMO_ROOT, "js", "mock-api.js"), "utf8"), sandbox, {
+  vm.runInContext(readFileSync(join(DEMO_ROOT, "assets", "js", "mock-api.js"), "utf8"), sandbox, {
     filename: "demo/js/mock-api.js",
   });
 

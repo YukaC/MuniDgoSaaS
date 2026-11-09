@@ -15,18 +15,24 @@ demo/
 ├── admin.html          # panel administrativo (en frontend/ es index.html)
 ├── login.html          # login del panel (sectores del municipio)
 ├── cliente.html        # portal del ciudadano (reservar, mis turnos, modificar, cancelar)
-├── css/style.css       # copia del CSS real
-├── css/demo.css        # estilos de la barra de rol y del recorrido (sólo demo)
-├── img/logo-muni.png
-├── js/
-│   ├── mock-api.js     # ← la "API": intercepta window.fetch y responde desde el seed
-│   ├── demo-bar.js     # ← barra de rol + recorrido guiado (sólo demo)
-│   ├── seed.json       # ← datos generados desde database/02_SEED_MUNI.sql
-│   ├── config.js       # API_BASE_URL = "" (sin hosts hardcodeados)
-│   └── ...             # main.js, turnos.js, cliente-publico.js, etc. (código real)
+├── assets/                  # todo lo que corre en el navegador (ver nota abajo)
+│   ├── css/style.css        # copia del CSS real
+│   ├── css/demo.css         # barra de rol y recorrido (sólo demo)
+│   ├── img/logo-muni.png
+│   └── js/
+│       ├── mock-api.js      # ← la "API": intercepta window.fetch y responde desde el seed
+│       ├── demo-bar.js      # ← barra de rol + recorrido guiado (sólo demo)
+│       ├── seed.json        # ← datos generados desde database/02_SEED_MUNI.sql
+│       ├── config.js        # API_BASE_URL = "" (sin hosts hardcodeados)
+│       └── ...              # main.js, turnos.js, cliente-publico.js, etc. (código real)
 ├── scripts/build-seed.mjs  # SQL → JSON (node, sin dependencias)
 └── tests/                  # node --test: parser del seed + contrato del mock
 ```
+
+Todo lo que corre en el navegador vive en `assets/`. Además de ordenar, eso le indica a los
+checks de arquitectura (`.ra/checks`) que es código de cliente: las reglas de servidor
+(`http-timeout`, `stateless-app`, `structured-logs`) sólo se aplican fuera de carpetas como
+`assets/`, `static/` o `frontend/`, igual que con `frontend/`.
 
 ## Qué está simulado y qué es real
 
@@ -37,8 +43,8 @@ horarios libres del lado del cliente, render de charts, búsqueda, responsive.
 
 | Pieza real | En la demo |
 |---|---|
-| Flask (`backend/api/routes/**`) | `js/mock-api.js`: un mapa ruta → handler que imita códigos HTTP, forma del JSON, nombres de campos y headers (`x-access-token` + `id-empresa`, `x-access-token-cliente`) |
-| MySQL + `database/*.sql` | `js/seed.json` generado por `scripts/build-seed.mjs` |
+| Flask (`backend/api/routes/**`) | `assets/js/mock-api.js`: un mapa ruta → handler que imita códigos HTTP, forma del JSON, nombres de campos y headers (`x-access-token` + `id-empresa`, `x-access-token-cliente`) |
+| MySQL + `database/*.sql` | `assets/js/seed.json` generado por `scripts/build-seed.mjs` |
 | JWT firmado | token de mentira (`demo-token:empresa:<id>` / `demo-cliente-token:<id>`); el mock valida que el token corresponda a la empresa o al cliente |
 | Hash pbkdf2 de contraseñas | contraseña fija de demo (`123456`). El JSON **no** incluye los hashes del SQL |
 | Escrituras en la base | `localStorage` bajo el prefijo `turnos-demo:` (`turnos-demo:state`) |
@@ -118,11 +124,11 @@ lo que reservó el ciudadano.)
 
 ## Regenerar el seed
 
-`js/seed.json` se genera desde el SQL real, no se edita a mano:
+`assets/js/seed.json` se genera desde el SQL real, no se edita a mano:
 
 ```bash
 node demo/scripts/build-seed.mjs
-# database/02_SEED_MUNI.sql -> demo/js/seed.json
+# database/02_SEED_MUNI.sql -> demo/assets/js/seed.json
 # 26 INSERT statements parsed
 # empresas         ...... 4
 # profesionales    ...... 91
@@ -155,7 +161,7 @@ Es un sitio 100 % estático, sin build y sin variables de entorno:
 3. **Framework Preset:** *Other* (sin build command, sin output directory).
 4. Deploy. `vercel.json` no hace falta.
 
-## API mockeada (`js/mock-api.js`)
+## API mockeada (`assets/js/mock-api.js`)
 
 Rutas cubiertas, todas con la forma de `backend/api/routes/**`:
 
@@ -211,7 +217,7 @@ Sin maquillaje:
    del perfil devolvería 405. La demo acepta `PUT` y `PATCH` para que se pueda probar.
 8. **"Modificar turno" es un agregado de la demo.** El frontend original sólo permitía
    cancelar; la API ya tenía `/modificar`, así que se agregó el panel mínimo
-   (`#panel-modificar` en `cliente.html` + 3 funciones en `js/cliente-publico.js`).
+   (`#panel-modificar` en `cliente.html` + 3 funciones en `assets/js/cliente-publico.js`).
    Es el único cambio de comportamiento respecto de `frontend/`.
 9. **Datos del seed:** son los del SQL de demo (profesionales y servicios del municipio),
    con las fechas corridas a la fecha actual (ver "Regenerar el seed").
@@ -222,12 +228,12 @@ El resto del código es una copia literal (rama `fix/turnosApp-query-limits`). C
 
 | Archivo | Cambio |
 |---|---|
-| `js/config.js` | `API_BASE_URL = ""` (antes `http://127.0.0.1:5000`) |
-| `*.html` | se agrega `<script src="js/mock-api.js">` antes de `config.js`, y `js/demo-bar.js` + `css/demo.css` |
-| `index.html` → `admin.html` | el panel se renombra para que `/` sea la portada de la demo; `js/login.js` redirige a `admin.html` |
-| `js/main.js` | **Cerrar Sesión** borra sólo `authToken` y `activeUser` en vez de `localStorage.clear()` |
+| `assets/js/config.js` | `API_BASE_URL = ""` (antes `http://127.0.0.1:5000`) |
+| `*.html` | se agrega `<script src="assets/js/mock-api.js">` antes de `config.js`, y `assets/js/demo-bar.js` + `assets/css/demo.css` |
+| `index.html` → `admin.html` | el panel se renombra para que `/` sea la portada de la demo; `assets/js/login.js` redirige a `admin.html` |
+| `assets/js/main.js` | **Cerrar Sesión** borra sólo `authToken` y `activeUser` en vez de `localStorage.clear()` |
 | `login.html` | aviso con los otros sectores (tenants) disponibles |
-| `cliente.html`, `js/cliente-publico.js` | panel y handlers de "Modificar Turno" (punto 8) |
+| `cliente.html`, `assets/js/cliente-publico.js` | panel y handlers de "Modificar Turno" (punto 8) |
 
 ## Tests
 
@@ -238,7 +244,7 @@ node --test tests/*.mjs
 
 - `tests/build-seed.test.mjs`: corre el generador y valida conteos por tabla, IDs
   secuenciales, relaciones, evaluación de fechas MySQL y que no se filtren hashes.
-- `tests/mock-api.test.mjs`: levanta `js/mock-api.js` en un sandbox con
+- `tests/mock-api.test.mjs`: levanta `assets/js/mock-api.js` en un sandbox con
   `window`/`localStorage`/`fetch` falsos y ejercita el contrato: 501 para rutas no
   cubiertas, guards de token, shape de las listas, cálculo de slots, alta/edición/baja
   de turnos, flujo completo de reserva del ciudadano (incluida la persistencia tras

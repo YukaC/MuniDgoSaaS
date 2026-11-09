@@ -60,7 +60,7 @@
 
   const STORAGE_PREFIX = "turnos-demo:";
   const STATE_KEY = `${STORAGE_PREFIX}state`;
-  const SEED_URL = "js/seed.json";
+  const SEED_URL = "assets/js/seed.json";
 
   // Credentials of the demo. The real backend stores pbkdf2 hashes; the demo
   // cannot verify them, so it accepts this documented password instead.
