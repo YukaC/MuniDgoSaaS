@@ -27,20 +27,20 @@
             </div>
             <nav class="main-nav">
                 <ul>
-                    <li><a data-target="dashboard" class="active">🏠 Panel</a></li>
-                    <li><a data-target="reports">📊 Reportes</a></li>
-                    <li><a data-target="view-shifts">📅 Citas</a></li>
-                    <li><a data-target="view-clients">👥 Clientes</a></li>
-                    <li><a data-target="view-professional">👨‍⚕️ Profesionales</a></li>
-                    <li><a data-target="view-availability">⏰ Disponibilidades</a></li>
-                    <li><a data-target="view-services">💼 Servicios</a></li>
+                    <li><a data-target="dashboard" class="active"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>Panel</a></li>
+                    <li><a data-target="reports"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reportes</a></li>
+                    <li><a data-target="view-shifts"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Citas</a></li>
+                    <li><a data-target="view-clients"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>Clientes</a></li>
+                    <li><a data-target="view-professional"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0"/></svg>Profesionales</a></li>
+                    <li><a data-target="view-availability"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Disponibilidades</a></li>
+                    <li><a data-target="view-services"><svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>Servicios</a></li>
                 </ul>
             </nav>
         </aside>
 
         <main class="main-content">
             <header class="topbar">
-                <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+                <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
                 <h1>Panel de Control</h1>
 
                 <!-- Barra de búsqueda global -->
@@ -56,7 +56,7 @@
             <!-- SECCIÓN DASHBOARD -->
             <div class="page-content active-page" id="dashboard">
                 <h2 id="welcome-message">Bienvenido al Panel</h2>
-                <p class="help-text">Resumen de actividad del día.</p>
+                <p class="page-subtitle">Resumen de turnos del sector.</p>
 
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -74,7 +74,7 @@
                 </div>
 
                 <div class="recent-shifts">
-                    <h3>Próximos Turnos</h3>
+                    <h3>Próximos turnos</h3>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -96,7 +96,7 @@
 
             <!-- SECCIÓN REPORTES -->
             <div class="page-content" id="reports" style="display: none;">
-                <h2>📊 Reportes y Métricas</h2>
+                <h2>Reportes y Métricas</h2>
 
                 <!-- Barras de Progreso -->
                 <div class="stats-grid">
@@ -121,18 +121,18 @@
                 <!-- Gráficos ECharts -->
                 <div class="charts-grid">
                     <div class="chart-card-container">
-                        <h3>💰 Ingresos por Profesional (Top 10)</h3>
+                        <h3>Ingresos por Profesional (Top 10)</h3>
                         <div id="chart-revenue-prof" class="chart-container"></div>
                     </div>
                     <div class="chart-card-container">
-                        <h3>📈 Turnos Reservados - Última Semana</h3>
+                        <h3>Turnos Reservados - Última Semana</h3>
                         <div id="chart-turns-week" class="chart-container"></div>
                     </div>
                 </div>
 
                 <!-- Tablas Detalladas -->
                 <div class="recent-shifts" style="margin-top: 20px;">
-                    <h3>👨‍⚕️ Rendimiento Detallado</h3>
+                    <h3>Rendimiento Detallado</h3>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -148,7 +148,7 @@
                 </div>
 
                 <div class="recent-shifts" style="margin-top: 20px;">
-                    <h3>👥 Clientes Más Activos</h3>
+                    <h3>Clientes Más Activos</h3>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -167,7 +167,7 @@
             <!-- SECCIÓN CITAS -->
             <div class="page-content" id="view-shifts" style="display: none;">
                 <div class="flex-between">
-                    <h2>📅 Gestión de Citas</h2>
+                    <h2>Gestión de Citas</h2>
                     <button class="btn-primary" style="width: auto;" onclick="abrirModalTurno()">+ Nuevo Turno</button>
                 </div>
                 <div class="turnos-container" id="container-gestion-turnos">
@@ -178,7 +178,7 @@
             <!-- SECCIÓN CLIENTES -->
             <div class="page-content" id="view-clients" style="display: none;">
                 <div class="flex-between">
-                    <h2>👥 Base de Clientes</h2>
+                    <h2>Base de Clientes</h2>
                     <button class="btn-primary" style="width: auto;" onclick="abrirModalCliente()">+ Nuevo
                         Cliente</button>
                 </div>
@@ -190,7 +190,7 @@
             <!-- SECCIÓN PROFESIONALES -->
             <div class="page-content" id="view-professional" style="display: none;">
                 <div class="flex-between">
-                    <h2>👨‍⚕️ Equipo de Profesionales</h2>
+                    <h2>Equipo de Profesionales</h2>
                     <button class="btn-primary" style="width: auto;" onclick="abrirModalProfesional()">+ Nuevo
                         Profesional</button>
                 </div>
@@ -202,7 +202,7 @@
             <!-- SECCIÓN SERVICIOS -->
             <div class="page-content" id="view-services" style="display: none;">
                 <div class="flex-between">
-                    <h2>💼 Catálogo de Servicios</h2>
+                    <h2>Catálogo de Servicios</h2>
                     <button class="btn-primary" style="width: auto;" onclick="abrirModalServicio()">+ Nuevo
                         Servicio</button>
                 </div>
@@ -214,7 +214,7 @@
             <!-- SECCIÓN DISPONIBILIDADES -->
             <div class="page-content" id="view-availability" style="display: none;">
                 <div class="flex-between">
-                    <h2>⏰ Gestión de Disponibilidades</h2>
+                    <h2>Gestión de Disponibilidades</h2>
                 </div>
                 <div class="items-container" id="container-gestion-disponibilidades">
                     <!-- Las disponibilidades se cargarán aquí como cards -->

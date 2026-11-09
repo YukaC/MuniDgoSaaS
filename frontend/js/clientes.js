@@ -51,7 +51,7 @@ function renderizarTablaClientes(clientes) {
         
         card.innerHTML = `
             <div class="item-card-header">
-                <h3>👤 ${cliente.nombre} ${cliente.apellido}</h3>
+                <h3>${cliente.nombre} ${cliente.apellido}</h3>
             </div>
             <div class="item-card-body">
                 <div class="info-item">
@@ -68,8 +68,8 @@ function renderizarTablaClientes(clientes) {
                 </div>
             </div>
             <div class="item-card-footer">
-                <button class="btn-primary btn-sm" onclick="editarCliente(${cliente.id})">✏️ Editar</button>
-                <button class="btn-danger btn-sm" onclick="eliminarCliente(${cliente.id})">🗑️ Eliminar</button>
+                <button class="btn-primary btn-sm" onclick="editarCliente(${cliente.id})">Editar</button>
+                <button class="btn-danger btn-sm" onclick="eliminarCliente(${cliente.id})">Eliminar</button>
             </div>
         `;
         

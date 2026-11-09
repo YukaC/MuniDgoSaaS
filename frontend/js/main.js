@@ -84,18 +84,23 @@ async function loadDashboard() {
 
     tbody.innerHTML = "";
 
-    if (turnos.length === 0) {
+    // proximos turnos: pendientes desde ahora, el mas cercano primero
+    const fechaTurno = (t) => new Date(String(t.start_datetime || "").replace(" ", "T"));
+    const ahora = new Date();
+    const proximos = turnos
+      .filter((t) => {
+        const estado = (t.status || t.estado || "").toLowerCase();
+        return estado !== "cancelado" && estado !== "completado" && fechaTurno(t) >= ahora;
+      })
+      .sort((a, b) => fechaTurno(a) - fechaTurno(b));
+
+    if (proximos.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="5" style="text-align:center">No hay turnos registrados</td></tr>';
+        '<tr><td colspan="5" class="table-empty">No hay turnos próximos</td></tr>';
       return;
     }
 
-    // ordenar por fecha mas reciente primero
-    turnos.sort(
-      (a, b) => new Date(b.start_datetime) - new Date(a.start_datetime)
-    );
-
-    turnos.forEach((turno) => {
+    proximos.forEach((turno) => {
       let stateColor = "var(--dark)";
       const estado = (
         turno.status ||
@@ -315,7 +320,7 @@ function mostrarMensajeNoResultados(seccion, mostrar) {
     if (!mensaje) {
       mensaje = document.createElement('div');
       mensaje.className = 'no-results-message';
-      mensaje.textContent = '🔍 No se encontraron resultados para tu búsqueda';
+      mensaje.textContent = 'No se encontraron resultados para tu búsqueda';
       seccion.appendChild(mensaje);
     }
     mensaje.style.display = 'block';

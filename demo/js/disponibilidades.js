@@ -103,7 +103,7 @@ function renderizarTablaPrincipal(disponibilidades) {
     
     card.innerHTML = `
       <div class="item-card-header">
-        <h3>⏰ ${prof.name} ${prof.surname}</h3>
+        <h3>${prof.name} ${prof.surname}</h3>
         <span class="badge-especialidad">${prof.especialidad || "General"}</span>
       </div>
       <div class="item-card-body">
@@ -112,7 +112,7 @@ function renderizarTablaPrincipal(disponibilidades) {
         </div>
       </div>
       <div class="item-card-footer">
-        <button class="btn-primary btn-sm" onclick="gestionarHorarios(${prof.id})">⚙️ Gestionar Horarios</button>
+        <button class="btn-primary btn-sm" onclick="gestionarHorarios(${prof.id})">Gestionar Horarios</button>
       </div>
     `;
     
@@ -191,7 +191,7 @@ async function actualizarListaModal(profId) {
                     <td style="padding:8px; font-size:0.9em;">${dia}</td>
                     <td style="padding:8px; font-size:0.9em;">${inicio} - ${fin}</td>
                     <td style="padding:8px; text-align:right;">
-                        <button type="button" class="btn-sm btn-danger" onclick="eliminarDisponibilidad(${h.id})">🗑️</button>
+                        <button type="button" class="btn-sm btn-danger" onclick="eliminarDisponibilidad(${h.id})">Quitar</button>
                     </td>
                 </tr>`;
     });

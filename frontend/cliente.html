@@ -92,31 +92,28 @@
         </section>
 
         <!-- Barra de Navegación Global (oculta hasta el login) -->
-        <nav id="nav-global" class="cliente-nav" style="display: none; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
-                <button id="btn-volver" class="btn-secondary btn-sm" onclick="volverADashboard()"
-                    style="display: none;">
-                    ← Volver
-                </button>
-
-                <button class="nav-btn" onclick="verPerfilGlobal()" style="margin-left: auto; margin-right: 10px;">
-                    Mi Perfil
-                </button>
-                <button class="btn-secondary nav-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+        <nav id="nav-global" class="cliente-nav" style="display: none;">
+            <button id="btn-volver" class="nav-btn nav-btn--back" onclick="volverADashboard()"
+                style="display: none;">
+                ← Volver
+            </button>
+            <span class="cliente-info" id="clienteNombreNavGlobal">Usuario</span>
+            <div class="cliente-nav__actions">
+                <button class="nav-btn" onclick="verPerfilGlobal()">Mi perfil</button>
+                <button class="nav-btn" onclick="cerrarSesion()">Cerrar sesión</button>
             </div>
-            <span class="cliente-info" id="clienteNombreNavGlobal">👤 Usuario</span>
         </nav>
 
         <!-- Dashboard Principal (Todos los Turnos) -->
         <section id="dashboard-principal" style="display: none;">
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>📅 Mis Turnos</h2>
+                    <h2>Mis Turnos</h2>
                     <button class="btn-primary" onclick="iniciarReserva()" style="width: auto;">
                         + Reservar Nuevo Turno
                     </button>
                 </div>
-                <p class="help-text">Tus turnos programados en todos los sectores del municipio se mostrarán debajo</p>
+                <p class="page-subtitle">Tus turnos en todos los sectores del municipio.</p>
 
                 <div id="resultados-turnos-todas-areas"></div>
             </div>
@@ -124,7 +121,7 @@
 
         <!-- Panel de Reserva de Turno -->
         <section id="panel-reserva" class="card" style="display: none;">
-            <h2>📅 Reservar Nuevo Turno</h2>
+            <h2>Reservar Nuevo Turno</h2>
 
             <div class="form-group">
                 <label>Selecciona el Sector:</label>
@@ -174,7 +171,7 @@
 
         <!-- Sección: Mi Perfil -->
         <section id="seccion-perfil" class="card" style="display: none;">
-            <h2>👤 Mi Perfil</h2>
+            <h2>Mi Perfil</h2>
             <form id="formPerfil">
                 <div class="form-row">
                     <div class="form-group">

@@ -162,26 +162,26 @@ function renderizarTurnos(turnos) {
             </div>
             <div class="item-card-body">
                 <div class="info-item">
-                    <strong>📅 Fecha y Hora:</strong>
+                    <strong>Fecha y Hora:</strong>
                     <span>${fecha} - ${hora}</span>
                 </div>
                 <div class="info-item">
-                    <strong>👤 Cliente:</strong>
+                    <strong>Cliente:</strong>
                     <span>${nombreCliente}</span>
                 </div>
                 <div class="info-item">
-                    <strong>👨‍⚕️ Profesional:</strong>
+                    <strong>Profesional:</strong>
                     <span>${nombreProfesional}</span>
                 </div>
                 ${observaciones ? `
                 <div class="info-item">
-                    <strong>📝 Observaciones:</strong>
+                    <strong>Observaciones:</strong>
                     <span>${observaciones}</span>
                 </div>` : ''}
             </div>
             <div class="item-card-footer">
-                <button class="btn-primary btn-sm" onclick="prepararEdicion(${turno.id})">✏️ Editar</button>
-                <button class="btn-danger btn-sm" onclick="eliminarTurno(${turno.id})">🗑️ Eliminar</button>
+                <button class="btn-primary btn-sm" onclick="prepararEdicion(${turno.id})">Editar</button>
+                <button class="btn-danger btn-sm" onclick="eliminarTurno(${turno.id})">Eliminar</button>
             </div>
         `;
         
