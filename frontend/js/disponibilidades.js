@@ -81,7 +81,7 @@ function renderizarTablaPrincipal(disponibilidades) {
       (d) => d.profesional_id == prof.id
     );
 
-    let resumenHTML = '<span style="color:#999; font-style:italic;">Sin horarios asignados</span>';
+    let resumenHTML = '<span style="color: var(--muted); font-style:italic;">Sin horarios asignados</span>';
 
     if (susHorarios.length > 0) {
       susHorarios.sort(
@@ -162,7 +162,7 @@ async function actualizarListaModal(profId) {
 
     if (!Array.isArray(horarios) || horarios.length === 0) {
       container.innerHTML =
-        '<p style="padding:10px; color:#777; text-align:center;">No tiene horarios cargados.</p>';
+        '<p style="padding:10px; color: var(--muted); text-align:center;">No tiene horarios cargados.</p>';
       return;
     }
 
