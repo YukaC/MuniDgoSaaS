@@ -134,12 +134,12 @@ async function loadDashboard() {
                 <tr>
                     <td>
                         <strong>${horaFormateada}</strong>
-                        <div style="font-size:0.8em; color:#777">${fechaFormateada}</div>
+                        <div style="font-size:0.8em; color: var(--muted)">${fechaFormateada}</div>
                     </td>
                     <td>${cliente}</td>
                     <td>
                         ${profName}<br>
-                        <small style="color:#777">[${especialidad}]</small>
+                        <small style="color: var(--muted)">[${especialidad}]</small>
                     </td>
                     <td style="color: ${stateColor}; font-weight:bold; text-transform:capitalize;">
                         ${estado}
