@@ -1,7 +1,7 @@
 /* --- MODULO DE REPORTES Y ESTADISTICAS --- */
 async function cargarLogicaReportes() {
   try {
-    console.log("📊 Iniciando módulo de reportes...");
+    console.log("Iniciando módulo de reportes...");
 
     const empresaId = window.getEmpresaId();
     if (!empresaId) throw new Error("Empresa no definida en sesión.");

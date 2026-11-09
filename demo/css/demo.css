@@ -200,6 +200,13 @@ body.has-demo-bar .topbar {
     100% { box-shadow: 0 0 0 18px rgba(255, 176, 32, 0); }
 }
 
+@media (max-width: 768px) {
+    body.has-demo-bar .sidebar {
+        top: var(--demo-bar-h);
+        height: calc(100vh - var(--demo-bar-h));
+    }
+}
+
 @media (max-width: 760px) {
     .demo-bar { gap: 8px; padding: 0 10px; }
     .demo-bar__tag,

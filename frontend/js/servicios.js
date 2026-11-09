@@ -50,7 +50,7 @@ function renderizarTablaServicios(lista) {
     
     card.innerHTML = `
       <div class="item-card-header">
-        <h3>💼 ${s.name}</h3>
+        <h3>${s.name}</h3>
         <span class="badge-precio">$${s.price}</span>
       </div>
       <div class="item-card-body">
@@ -64,8 +64,8 @@ function renderizarTablaServicios(lista) {
         </div>
       </div>
       <div class="item-card-footer">
-        <button class="btn-primary btn-sm" onclick="editarServicio(${s.id})">✏️ Editar</button>
-        <button class="btn-danger btn-sm" onclick="eliminarServicio(${s.id})">🗑️ Eliminar</button>
+        <button class="btn-primary btn-sm" onclick="editarServicio(${s.id})">Editar</button>
+        <button class="btn-danger btn-sm" onclick="eliminarServicio(${s.id})">Eliminar</button>
       </div>
     `;
     

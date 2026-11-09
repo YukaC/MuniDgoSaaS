@@ -158,7 +158,7 @@ async function mostrarDashboard() {
     // Actualizar nombre
     if (clienteAutenticado) {
         document.getElementById('clienteNombreNavGlobal').textContent = 
-            `👤 ${clienteAutenticado.nombre} ${clienteAutenticado.apellido}`;
+            `${clienteAutenticado.nombre} ${clienteAutenticado.apellido}`;
     }
     
     // Cargar todos los turnos
@@ -466,10 +466,10 @@ function mostrarTurnos(turnos, container) {
             ${puedeModificar ? `
             <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="btn-primary btn-sm" onclick="abrirModificacionTurno(${turno.id}, ${turno.empresa_id}, ${turno.profesional_id})">
-                    🔁 Modificar Turno
+                    Modificar Turno
                 </button>
                 <button class="btn-danger btn-sm" onclick="cancelarTurnoCliente(${turno.id}, ${turno.empresa_id})">
-                    🗑️ Cancelar Turno
+                    Cancelar Turno
                 </button>
             </div>
             ` : ''}
@@ -564,7 +564,7 @@ async function guardarPerfil(e) {
                 localStorage.setItem('clienteData', JSON.stringify(clienteAutenticado));
                 
                 document.getElementById('clienteNombreNavGlobal').textContent = 
-                    `👤 ${datos.nombre} ${datos.apellido}`;
+                    `${datos.nombre} ${datos.apellido}`;
             }
         } else {
             mostrarMensaje(data.message || 'Error al actualizar perfil', 'error');
