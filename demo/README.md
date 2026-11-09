@@ -6,17 +6,21 @@ Demo **sin backend y sin MySQL** del sistema de turnos municipal. Es el frontend
 (HTML + JS plano + CSS propio) copiado tal cual, con la API Flask reemplazada por un
 mock que corre en el navegador y lee un snapshot de la base en JSON.
 
-Objetivo: abrir una URL y poder reservar un turno de punta a punta en menos de un minuto.
+Objetivo: abrir una URL y entender en un minuto que es **un sistema con dos roles sobre los
+mismos datos**: el ciudadano reserva en el portal y el sector del municipio ve ese turno en su panel.
 
 ```
 demo/
-├── index.html          # panel administrativo (dashboard, reportes, turnos, clientes, ...)
+├── index.html          # portada de la demo: elegir rol (ciudadano / municipio) o recorrido guiado
+├── admin.html          # panel administrativo (en frontend/ es index.html)
 ├── login.html          # login del panel (sectores del municipio)
 ├── cliente.html        # portal del ciudadano (reservar, mis turnos, modificar, cancelar)
 ├── css/style.css       # copia del CSS real
+├── css/demo.css        # estilos de la barra de rol y del recorrido (sólo demo)
 ├── img/logo-muni.png
 ├── js/
 │   ├── mock-api.js     # ← la "API": intercepta window.fetch y responde desde el seed
+│   ├── demo-bar.js     # ← barra de rol + recorrido guiado (sólo demo)
 │   ├── seed.json       # ← datos generados desde database/02_SEED_MUNI.sql
 │   ├── config.js       # API_BASE_URL = "" (sin hosts hardcodeados)
 │   └── ...             # main.js, turnos.js, cliente-publico.js, etc. (código real)
@@ -77,28 +81,40 @@ No hace falta Node, ni Python packages, ni `.env`. Sólo un servidor estático
 ```bash
 cd demo
 python3 -m http.server 8099
+# → http://127.0.0.1:8099/               (portada: elegir rol o recorrido guiado)
 # → http://127.0.0.1:8099/cliente.html   (portal del ciudadano)
 # → http://127.0.0.1:8099/login.html     (panel administrativo)
 ```
 
 ### Flujo recomendado para la entrevista (2 minutos)
 
+La forma corta: en la portada, **▶ Empezar recorrido**. Son tres pasos guiados: reservar como
+ciudadano → un clic para entrar al panel del sector → el turno aparece resaltado en "Citas".
+
+En todas las páginas hay una barra arriba que dice qué rol estás viendo, con un botón para
+pasar al otro rol (entra directo al panel del sector donde reservaste) y otro para reiniciar
+la demo. Si reservás sin el recorrido, el panel igual marca el turno nuevo.
+
+Paso a paso, sin el recorrido:
+
 1. `cliente.html` → DNI `12345678`, contraseña `123456`.
 2. **+ Reservar Nuevo Turno** → sector "Hospital Municipal" → profesional → fecha
    (elegí un día que el profesional atienda: el portal te muestra los días) → hora → confirmar.
 3. El turno aparece en "Mis Turnos"; recargá la página: sigue ahí (está en `localStorage`).
 4. **🔁 Modificar Turno** para reprogramarlo, **🗑️ Cancelar Turno** para cancelarlo.
-5. `login.html` → `hospital_muni` / `123456` → dashboard con contadores, listados de
-   turnos / clientes / profesionales / servicios / disponibilidades y reportes con ECharts.
+5. **Ver como municipio →** en la barra (o `login.html` → `hospital_muni` / `123456`) → dashboard
+   con contadores, listados de turnos / clientes / profesionales / servicios / disponibilidades
+   y reportes con ECharts. El turno del paso 2 aparece resaltado en "Citas".
 
 ### Resetear los datos de la demo
 
 La demo persiste en `localStorage`. Para volver al estado del seed:
 
-- consola del navegador: `turnosDemoReset()`, o simplemente `localStorage.clear()` y recargar.
+- botón **Reiniciar demo** de la barra, o en la consola `turnosDemoReset()`.
 
-Ojo: el botón **Cerrar Sesión** del panel administrativo ejecuta `localStorage.clear()`
-(comportamiento del frontend original), así que también reinicia los datos de la demo.
+**Cerrar Sesión** del panel sólo cierra la sesión del sector; los turnos de la demo se mantienen.
+(El frontend original hace `localStorage.clear()`; en la demo se cambió para que no se pierda
+lo que reservó el ciudadano.)
 
 ## Regenerar el seed
 
@@ -124,8 +140,10 @@ y emula los `INSERT ... SELECT` del seed (disponibilidades por sector vía
 `CROSS JOIN`, y un turno por sector tomando el n-ésimo profesional). Los IDs se
 asignan 1..n en el orden del archivo, igual que el `AUTO_INCREMENT` original.
 
-**Las fechas del seed se congelan al generar el JSON** (los turnos "futuros" quedan a
-1–4 días de la fecha de generación). Si la demo se ve vieja, volvé a correr el script.
+Las fechas del JSON quedan fijas al generarlo, pero `mock-api.js` las **corre hacia adelante
+al cargar** (los días que pasaron desde `generatedAt`, manteniendo la hora). Así los turnos
+"completados" siempre son de hace unos días y los "reservados" de los próximos días, sin
+tener que regenerar el seed. Un estado guardado en `localStorage` se corre de la misma forma.
 Los hashes de contraseña del SQL se descartan a propósito: no viajan al navegador.
 
 ## Deploy en Vercel
@@ -195,9 +213,8 @@ Sin maquillaje:
    cancelar; la API ya tenía `/modificar`, así que se agregó el panel mínimo
    (`#panel-modificar` en `cliente.html` + 3 funciones en `js/cliente-publico.js`).
    Es el único cambio de comportamiento respecto de `frontend/`.
-9. **Datos del seed:** son los del SQL de demo (profesionales y servicios del municipio).
-   Los turnos "futuros" del seed se generan relativos a la fecha de build; si el JSON
-   queda viejo, hay que regenerarlo.
+9. **Datos del seed:** son los del SQL de demo (profesionales y servicios del municipio),
+   con las fechas corridas a la fecha actual (ver "Regenerar el seed").
 
 ## Diferencias con `frontend/`
 
@@ -206,14 +223,17 @@ El resto del código es una copia literal (rama `fix/turnosApp-query-limits`). C
 | Archivo | Cambio |
 |---|---|
 | `js/config.js` | `API_BASE_URL = ""` (antes `http://127.0.0.1:5000`) |
-| `*.html` | se agrega `<script src="js/mock-api.js">` antes de `config.js` |
+| `*.html` | se agrega `<script src="js/mock-api.js">` antes de `config.js`, y `js/demo-bar.js` + `css/demo.css` |
+| `index.html` → `admin.html` | el panel se renombra para que `/` sea la portada de la demo; `js/login.js` redirige a `admin.html` |
+| `js/main.js` | **Cerrar Sesión** borra sólo `authToken` y `activeUser` en vez de `localStorage.clear()` |
+| `login.html` | aviso con los otros sectores (tenants) disponibles |
 | `cliente.html`, `js/cliente-publico.js` | panel y handlers de "Modificar Turno" (punto 8) |
 
 ## Tests
 
 ```bash
 cd demo
-node --test tests/
+node --test tests/*.mjs
 ```
 
 - `tests/build-seed.test.mjs`: corre el generador y valida conteos por tabla, IDs
@@ -222,7 +242,8 @@ node --test tests/
   `window`/`localStorage`/`fetch` falsos y ejercita el contrato: 501 para rutas no
   cubiertas, guards de token, shape de las listas, cálculo de slots, alta/edición/baja
   de turnos, flujo completo de reserva del ciudadano (incluida la persistencia tras
-  "recargar"), superposición, cancelación y reprogramación.
+  "recargar"), superposición, cancelación y reprogramación, corrimiento de fechas del seed y
+  registro de la última reserva que usa la barra de la demo.
 
 ## Origen
 

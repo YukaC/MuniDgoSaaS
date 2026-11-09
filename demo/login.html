@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="img/logo-muni.png">
     <!-- Importamos el CSS unificado -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/demo.css">
 </head>
 
 <body class="login-page">
@@ -33,7 +34,9 @@
             <button type="submit" class="btn-primary" id="btnLogin">Ingresar</button>
 
             <p class="demo-hint" role="note">Demo: credenciales precargadas — sector Hospital
-                (<code>hospital_muni</code>), otras opciones en el README. Sólo tenés que tocar Ingresar.</p>
+                (<code>hospital_muni</code>). Sólo tenés que tocar Ingresar. Cada sector es un tenant
+                separado: probá también <code>vialidad_muni</code>, <code>admin_muni</code> o
+                <code>registro_civil</code> (misma contraseña).</p>
         </form>
     </div>
 
@@ -48,6 +51,7 @@
     <!-- Scripts necesarios -->
     <!-- Demo estatica: intercepta fetch antes de config.js -->
     <script src="js/mock-api.js"></script>
+    <script src="js/demo-bar.js"></script>
     <script src="js/config.js"></script>
     <script src="js/login.js"></script>
 </body>
